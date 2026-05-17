@@ -1,11 +1,13 @@
 const express = require('express');
-const { executionQueue, queueEvents } = require('./queue');
+const { executionQueue, queueEvents } = require('../src/queue');
 const { validateRequest } = require('./validate');
 
 const app = express();
 app.use(express.json());
 
 app.post('/execute', async (req, res) => {
+  console.log(`Request handled by PID ${process.pid}`);
+  
   const error = validateRequest(req.body);
   if (error) return res.status(400).json({ error });
 

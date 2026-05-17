@@ -1,6 +1,6 @@
 const { Worker } = require('bullmq');
 const { execute } = require('./executor');
-const { connection } = require('./queue');
+const { connection } = require('../src/queue');
 
 const worker = new Worker('executions', async (job) => {
     const { code, language } = job.data;

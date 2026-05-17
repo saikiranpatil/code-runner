@@ -1,4 +1,41 @@
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"                  # only Nginx is exposed to the host now
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro   # mount our config read-only
+    depends_on:
+      - server                   # wait for server to start first
+    networks:
+      - redis-network
+  server:
+    build: ./server
+    environment:
+      - REDIS_HOST=redis
+    deploy:
+      replicas: 3                # spin up 3 Express instances
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - redis-network
+
+  worker:
+    build: ./worker
+    environment:
+      - REDIS_HOST=redis
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # ↑ mounts host Docker socket into worker container
+      # worker talks to HOST Docker daemon
+      # execution containers run on host, not nested inside worker
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - redis-network
+
   redis:
     image: redis:7-alpine
     container_name: redis
