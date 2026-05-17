@@ -3,8 +3,8 @@ const { execute } = require('./executor');
 const { connection } = require('./queue');
 
 const worker = new Worker('executions', async (job) => {
-    const { code } = job.data;
-    const result = await execute(code);
+    const { code, language } = job.data;
+    const result = await execute(code, language);
     return result; // this becomes job.returnvalue
 }, {
     connection,

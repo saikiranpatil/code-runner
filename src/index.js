@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 
 app.post('/execute', async (req, res) => {
-  const { code } = req.body;
+  const { code, language = 'javascript' } = req.body;
 
   if (!code || typeof code !== 'string') {
     return res.status(400).json({ error: 'code is required' });
@@ -17,7 +17,7 @@ app.post('/execute', async (req, res) => {
   }
 
   // Add job to queue
-  const job = await executionQueue.add('run', { code });
+  const job = await executionQueue.add('run', { code, language });
 
   // Wait for result (long-polling on the job)
   const result = await job.waitUntilFinished(queueEvents, 10000);

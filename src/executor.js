@@ -1,15 +1,24 @@
 const { spawn } = require("child_process");
+const languages = require('./languages');
 
-function execute(code, timeoutMs = 5000) {
+function execute(code, language = 'javascript', timeoutMs = 5000) {
     return new Promise((resolve) => {
+        const lang = languages[language];
+
+        if (!lang) {
+            return resolve({ stdout: '', stderr: `Unsupported language: ${language}`, exitCode: 1, timedOut: false });
+        }
+
+        console.log(`Running ${language} code with following options: ${lang.toString()}`);
+
         const child = spawn('docker', [
             'run', '--rm',        // delete container after exit
             '-i',                 // keep stdin open so we can pipe code in
             '--network', 'none',  // no internet
             '--memory', '50m',    // max 50MB RAM
             '--cpus', '0.5',      // max half a CPU
-            'node:alpine',        // image
-            'node', '--input-type=module', '-'
+            lang.image,           // image
+            ...lang.cmd
         ]);
 
         let stdout = '';
