@@ -14,4 +14,9 @@ const worker = new Worker('executions', async (job) => {
 worker.on('completed', (job) => console.log(`Job ${job.id} done`));
 worker.on('failed', (job, err) => console.error(`Job ${job.id} failed:`, err));
 
+// If worker itself throws unexpectedly
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection in worker:', err);
+});
+
 console.log('Worker started, concurrency: 3');

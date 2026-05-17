@@ -12,6 +12,7 @@
   "type": "commonjs",
   "dependencies": {
     "bullmq": "^5.76.10",
+    "crypto": "^1.0.1",
     "express": "^5.2.1",
     "ioredis": "^5.10.1"
   }

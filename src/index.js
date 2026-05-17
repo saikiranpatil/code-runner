@@ -1,28 +1,23 @@
 const express = require('express');
-const { execute } = require('./executor');
 const { executionQueue, queueEvents } = require('./queue');
+const { validateRequest } = require('./validate');
 
 const app = express();
 app.use(express.json());
 
 app.post('/execute', async (req, res) => {
+  const error = validateRequest(req.body);
+  if (error) return res.status(400).json({ error });
+
   const { code, language = 'javascript' } = req.body;
 
-  if (!code || typeof code !== 'string') {
-    return res.status(400).json({ error: 'code is required' });
+  try {
+    const job = await executionQueue.add('run', { code, language });
+    const result = await job.waitUntilFinished(queueEvents, 10000);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'execution failed', detail: err.message });
   }
-
-  if (code.length > 10000) {
-    return res.status(400).json({ error: 'code too long' });
-  }
-
-  // Add job to queue
-  const job = await executionQueue.add('run', { code, language });
-
-  // Wait for result (long-polling on the job)
-  const result = await job.waitUntilFinished(queueEvents, 10000);
-
-  res.json(result);
 });
 
-app.listen(3000, () => console.log('Worker running on :3000'));
+app.listen(3000, () => console.log('Server on :3000'));
