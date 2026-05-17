@@ -2,7 +2,15 @@ const { spawn } = require("child_process");
 
 function execute(code, timeoutMs = 5000) {
     return new Promise((resolve) => {
-        const child = spawn('node', ['-'], { stdio: ['pipe', 'pipe', 'pipe'] });
+        const child = spawn('docker', [
+            'run', '--rm',        // delete container after exit
+            '-i',                 // keep stdin open so we can pipe code in
+            '--network', 'none',  // no internet
+            '--memory', '50m',    // max 50MB RAM
+            '--cpus', '0.5',      // max half a CPU
+            'node:alpine',        // image
+            'node', '--input-type=module', '-'
+        ]);
 
         let stdout = '';
         let stderr = '';
@@ -17,7 +25,9 @@ function execute(code, timeoutMs = 5000) {
 
         child.on('close', (exitCode) => {
             clearTimeout(timer);
-            resolve({ stdout, stderr, exitCode, timedOut: false });
+
+            const oomKilled = exitCode === 137;
+            resolve({ stdout, stderr, exitCode, timedOut: false, oomKilled });
         });
 
         child.stdin.write(code);
