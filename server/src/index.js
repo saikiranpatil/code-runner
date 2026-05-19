@@ -1,9 +1,11 @@
 const express = require('express');
+const cors = require('cors');
 const { executionQueue, queueEvents } = require('../src/queue');
 const { validateRequest } = require('./validate');
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 app.post('/execute', async (req, res) => {
   console.log(`Request handled by PID ${process.pid}`);

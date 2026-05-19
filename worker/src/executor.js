@@ -4,7 +4,7 @@ const languages = require('./languages');
 
 const MAX_OUTPUT_BYTES = 1024 * 100; // 100KB
 
-function execute(code, language = 'javascript', timeoutMs = 5000) {
+function execute(code, language = 'js', timeoutMs = 5000) {
     return new Promise((resolve) => {
         const lang = languages[language];
 
