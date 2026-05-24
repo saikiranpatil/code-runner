@@ -8,14 +8,13 @@ import configuration from './config/configuration';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true,
       load: [configuration],
     }),
     BullModule.registerQueue({
-      name: "execution",
+      name: 'execution',
     })
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
