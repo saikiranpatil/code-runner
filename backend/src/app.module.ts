@@ -5,10 +5,12 @@ import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
 import { QUEUE_NAMES } from './common/constants';
 import { loggerConfig } from './config';
+import { ShutdownService } from './shutdown/shutdown.service';
 
 @Module({
   imports: [
     LoggerModule.forRoot(loggerConfig),
+    ShutdownService,
     BullModule.registerQueue({
       name: QUEUE_NAMES.EXECUTIONS,
     })
