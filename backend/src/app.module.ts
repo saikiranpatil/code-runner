@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
 import { QUEUE_NAMES } from './common/constants';
-import { loggerConfig } from './config/logger.config';
+import { loggerConfig } from './config';
 
 @Module({
   imports: [

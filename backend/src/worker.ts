@@ -1,11 +1,17 @@
-import { NestFactory } from "@nestjs/core";
-import { ExecutionModule } from "./execution/execution.module";
-import { Logger } from "@nestjs/common";
-import { envConfig } from "./config/env.config";
+import { Logger } from 'nestjs-pino';
+import { ExecutionModule } from './execution/execution.module';
+import { NestFactory } from '@nestjs/core';
+import { envConfig } from './config';
 
 async function bootstrap() {
-    const logger = new Logger('Worker');
-    await NestFactory.createApplicationContext(ExecutionModule, { bufferLogs: true });
-    logger.log(`Worker Started with options: ${envConfig.worker}`);
+    const app = await NestFactory.createApplicationContext(ExecutionModule, {
+        bufferLogs: true,
+    });
+
+    const logger = app.get(Logger);
+    app.useLogger(logger);
+
+    logger.log({ worker: envConfig.worker }, 'Worker started',);
 }
-bootstrap();
+
+void bootstrap();
