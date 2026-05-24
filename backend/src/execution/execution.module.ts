@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ExecutionService } from './execution.service';
 import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
 import { QUEUE_NAMES } from '../common/constants';
 import { loggerConfig, redisConfig } from '../config';
+import { ExecutorProcessor } from './execution.processor';
+import { ExecutorService } from './executor.service';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { loggerConfig, redisConfig } from '../config';
       name: QUEUE_NAMES.EXECUTIONS,
     }),
   ],
-  providers: [ExecutionService],
+  providers: [ExecutorProcessor, ExecutorService],
 })
 export class ExecutionModule { }

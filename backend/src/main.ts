@@ -18,6 +18,8 @@ async function bootstrap() {
   }));
   // global constient exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
+  // enable CORS
+  app.enableCors();
 
   const logger = app.get(Logger);
   app.useLogger(logger);

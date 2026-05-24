@@ -1,0 +1,68 @@
+import { Job } from 'bullmq';
+import {
+    Processor,
+    WorkerHost,
+    OnWorkerEvent,
+} from '@nestjs/bullmq';
+
+import { QUEUE_NAMES } from '../common/constants';
+import { envConfig } from '../config';
+import { ExecutionDto } from './dto/execution.dto';
+import { Logger } from 'nestjs-pino';
+import { ExecutorService } from './executor.service';
+
+@Processor(QUEUE_NAMES.EXECUTIONS, { concurrency: envConfig.worker.concurrency })
+export class ExecutorProcessor extends WorkerHost {
+    constructor(
+        private readonly logger: Logger,
+        private readonly executor: ExecutorService,
+    ) {
+        super();
+    }
+
+    async process(job: Job<ExecutionDto>) {
+        const { code, language } = job.data;
+        return this.executor.execute(code, language);
+    }
+
+    @OnWorkerEvent('completed')
+    onCompleted(job: Job, result: any) {
+        this.logger.log(
+            {
+                jobId: job.id,
+                result,
+            },
+            'Job completed successfully',
+        );
+    }
+
+    @OnWorkerEvent('failed')
+    onFailed(job: Job | undefined, error: Error) {
+        this.logger.error(
+            {
+                jobId: job?.id,
+                error: error.message,
+                stack: error.stack,
+            },
+            'Job failed',
+        );
+    }
+
+    @OnWorkerEvent('closed')
+    onClosed() {
+        this.logger.warn(
+            'Worker closed',
+        );
+    }
+
+    @OnWorkerEvent('error')
+    onError(error: Error) {
+        this.logger.error(
+            {
+                error: error.message,
+                stack: error.stack,
+            },
+            'Worker error',
+        );
+    }
+}

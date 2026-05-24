@@ -8,6 +8,7 @@ import type {
 } from "@monaco-editor/react";
 
 import type * as Monaco from "monaco-editor";
+import { useTheme } from "./theme-provider";
 
 const options: Monaco.editor.IStandaloneEditorConstructionOptions = {
     fontSize: 14,
@@ -28,19 +29,17 @@ export default function CodeEditor({ initialCode = "", onCodeChange, language }:
         onCodeChange?.(value ?? "");
     };
 
-    const handleMount: OnMount = (
-        editor,
-        monaco
-    ) => {
-        editor.focus();
-    };
+    const handleMount: OnMount = (editor) => { editor.focus() };
+
+    const { resolvedTheme } = useTheme();
+    const editorTheme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
 
     return (
         <Editor
             height="100%"
-            defaultLanguage={language}
-            theme="vs-light"
-            defaultValue={initialCode}
+            language={language}
+            value={initialCode}
+            theme={editorTheme}
             onChange={handleChange}
             onMount={handleMount}
             options={options}

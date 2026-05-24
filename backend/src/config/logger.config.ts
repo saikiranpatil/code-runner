@@ -3,7 +3,7 @@ import { envConfig } from "./env.config";
 
 export const loggerConfig = {
     pinoHttp: {
-        customProps: () => ({ context: 'HTTP' }),
+        // customProps: () => ({ context: 'HTTP' }), // disabled now
         transport:
             envConfig.nodeEnv === NODE_ENVS.DEVELOPMENT
                 ? {

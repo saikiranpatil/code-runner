@@ -46,6 +46,7 @@ import CodeEditor from "./components/code-editor"
 import { useState } from "react"
 
 import { useMutation } from "@tanstack/react-query"
+import { LANGUAGES } from "./shared/constants"
 
 // Structure defining the backend output shape
 interface ExecutionResult {
@@ -80,16 +81,14 @@ function ThemeToggle() {
 
 export default function App() {
   const [code, setCode] = useState('console.log("hello from js")');
-  const [language, setLanguage] = useState("js");
+  const [language, setLanguage] = useState("javascript");
   const [resultsActiveTab, setResultsActiveTab] = useState<"results" | "testcases" | "console">("results");
-
   const executeCodeMutation = useMutation<ExecutionResult, Error>({
     mutationFn: async () => {
+      // 1. Submit job
       const response = await fetch("http://localhost:3000/execute", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, language }),
       });
 
@@ -98,7 +97,39 @@ export default function App() {
         throw new Error(errorData.message || `Server error: ${response.status}`);
       }
 
-      return response.json();
+      const { jobId } = await response.json();
+
+      // 2. Poll for result
+      const TIMEOUT_MS = 30_000;
+      const started = Date.now();
+
+      return new Promise<ExecutionResult>((resolve, reject) => {
+        const interval = setInterval(async () => {
+          if (Date.now() - started > TIMEOUT_MS) {
+            clearInterval(interval);
+            return reject(new Error("Timed out waiting for result"));
+          }
+
+          try {
+            const res = await fetch(`http://localhost:3000/execute/${jobId}`);
+            if (!res.ok) throw new Error(`Poll error: ${res.status}`);
+
+            const data = await res.json(); // { state, result, error }
+
+            if (data.state === "completed") {
+              clearInterval(interval);
+              resolve(data.result); // data.result is your ExecutionResult
+            } else if (data.state === "failed") {
+              clearInterval(interval);
+              reject(new Error(data.error || "Execution failed"));
+            }
+            // else: still waiting (active/waiting/delayed), keep polling
+          } catch (err) {
+            clearInterval(interval);
+            reject(err);
+          }
+        }, 1000);
+      });
     },
 
     onSuccess: (data) => {
@@ -114,7 +145,6 @@ export default function App() {
 
   const responseData = executeCodeMutation.data;
 
-  // Derive execution status flags safely
   const isSuccess = responseData && responseData.exitCode === 0 && !responseData.timedOut && !responseData.oomKilled;
   const isRuntimeError = responseData && responseData.exitCode !== 0;
 
@@ -235,20 +265,16 @@ export default function App() {
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
                           <SelectGroup>
-                            <SelectItem value="js">JavaScript</SelectItem>
-                            <SelectItem value="ts">TypeScript</SelectItem>
-                            <SelectItem value="py">Python</SelectItem>
-                            <SelectItem value="rb">Ruby</SelectItem>
-                            <SelectItem value="php">PHP</SelectItem>
-                            <SelectItem value="cpp">C++</SelectItem>
-                            <SelectItem value="c">C</SelectItem>
+                            {LANGUAGES.map(({ label, value }) => (
+                              <SelectItem value={value}>{label}</SelectItem>
+                            ))}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <Button 
-                      onClick={() => executeCodeMutation.mutate()} 
+                    <Button
+                      onClick={() => executeCodeMutation.mutate()}
                       disabled={executeCodeMutation.isPending}
                       className="rounded-xl gap-2 font-medium"
                       size="sm"
@@ -270,9 +296,9 @@ export default function App() {
               {/* OUTPUT TABS PANEL */}
               <ResizablePanel defaultSize={40} minSize={20}>
                 <div className="flex h-full flex-col bg-background">
-                  <Tabs 
-                    value={resultsActiveTab} 
-                    onValueChange={(val) => setResultsActiveTab(val as any)} 
+                  <Tabs
+                    value={resultsActiveTab}
+                    onValueChange={(val) => setResultsActiveTab(val as any)}
                     className="flex h-full flex-col"
                   >
                     <div className="flex h-12 items-center justify-between border-b border-border px-4 bg-muted/40">

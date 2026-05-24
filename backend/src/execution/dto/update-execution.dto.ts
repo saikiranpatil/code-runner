@@ -1,4 +1,4 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreateExecutionDto } from './create-execution.dto';
+import { ExecutionDto } from './execution.dto';
 
-export class UpdateExecutionDto extends PartialType(CreateExecutionDto) {}
+export class UpdateExecutionDto extends PartialType(ExecutionDto) {}

@@ -10,12 +10,11 @@ import { ShutdownService } from './shutdown/shutdown.service';
 @Module({
   imports: [
     LoggerModule.forRoot(loggerConfig),
-    ShutdownService,
     BullModule.registerQueue({
       name: QUEUE_NAMES.EXECUTIONS,
-    })
+    }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ShutdownService],
 })
 export class AppModule { }
