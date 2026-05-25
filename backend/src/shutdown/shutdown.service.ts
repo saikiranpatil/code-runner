@@ -11,10 +11,15 @@ export class ShutdownService implements OnApplicationShutdown {
     async onApplicationShutdown(signal?: string) {
         console.log(`Shutdown triggered: ${signal}`);
 
-        // run all cleanup tasks in parallel
-        await Promise.allSettled(
+        const results = await Promise.allSettled(
             this.cleanups.map((fn) => fn()),
         );
+
+        results.forEach((r, i) => {
+            if (r.status === 'rejected') {
+                console.error(`Cleanup task ${i} failed`, r.reason);
+            }
+        });
 
         console.log('All resources closed');
     }

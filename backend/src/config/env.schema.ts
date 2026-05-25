@@ -13,6 +13,9 @@ export const envSchema = z.object({
     WORKER_CONCURRENCY: z.coerce.number().default(3),
     WORKER_EXECUTION_TIMEOUT_MS: z.coerce.number().default(5000),
     WORKER_MAX_OUTPUT_BYTES: z.coerce.number().default(1024 * 100),
+   
+    // database
+    DATABASE_URL: z.string(),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;

@@ -4,9 +4,10 @@ import { envConfig } from './config/env.config';
 import { Logger } from 'nestjs-pino';
 import { HttpExceptionFilter } from './http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, logger: false });
+  const app = await NestFactory.create(AppModule);
 
   // graceful shutdown of application
   app.enableShutdownHooks();
@@ -27,6 +28,14 @@ async function bootstrap() {
   await app.listen(envConfig.port);
 
   logger.log(`Application started at port: ${envConfig.port}`);
+
+  const config = new DocumentBuilder()
+    .setTitle('Median')
+    .setDescription('The Median API description')
+    .setVersion('0.1')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   const shutdown = async () => {
     await app.close(); // stops HTTP server + triggers module cleanup

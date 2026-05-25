@@ -86,7 +86,7 @@ export default function App() {
   const executeCodeMutation = useMutation<ExecutionResult, Error>({
     mutationFn: async () => {
       // 1. Submit job
-      const response = await fetch("http://localhost:3000/execute", {
+      const response = await fetch("/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, language }),
@@ -111,7 +111,7 @@ export default function App() {
           }
 
           try {
-            const res = await fetch(`http://localhost:3000/execute/${jobId}`);
+            const res = await fetch(`/execute/${jobId}`);
             if (!res.ok) throw new Error(`Poll error: ${res.status}`);
 
             const data = await res.json(); // { state, result, error }
