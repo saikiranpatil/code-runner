@@ -1,15 +1,17 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
+import { Logger } from 'nestjs-pino';
 
 @Injectable()
 export class ShutdownService implements OnApplicationShutdown {
     private readonly cleanups: (() => Promise<void>)[] = [];
+    constructor(private readonly logger: Logger) { }
 
     register(cleanup: () => Promise<void>) {
         this.cleanups.push(cleanup);
     }
 
     async onApplicationShutdown(signal?: string) {
-        console.log(`Shutdown triggered: ${signal}`);
+        this.logger.log(`Shutdown triggered: ${signal}`);
 
         const results = await Promise.allSettled(
             this.cleanups.map((fn) => fn()),
@@ -17,10 +19,10 @@ export class ShutdownService implements OnApplicationShutdown {
 
         results.forEach((r, i) => {
             if (r.status === 'rejected') {
-                console.error(`Cleanup task ${i} failed`, r.reason);
+                this.logger.error(`Cleanup task ${i} failed`, r.reason);
             }
         });
 
-        console.log('All resources closed');
+        this.logger.log('All resources closed');
     }
 }

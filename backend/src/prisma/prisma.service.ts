@@ -1,20 +1,24 @@
+import pg from 'pg';
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { PrismaClient } from './generated/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { ShutdownService } from '../shutdown/shutdown.service';
-import { PrismaClient } from '@prisma/client/extension';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
-    constructor(private readonly shutdownService: ShutdownService) {
-        super({
-            datasources: {
-                db: { url: process.env.DATABASE_URL },
-            },
-            log: ['error', 'warn'],
+    constructor(private readonly shutdownService: ShutdownService,) {
+        const pool = new pg.Pool({
+            connectionString: process.env.DATABASE_URL
         });
+        const adapter = new PrismaPg(pool);
+
+        super({ adapter });
     }
 
     async onModuleInit() {
         await this.$connect();
-        this.shutdownService.register(() => this.$disconnect());
+        this.shutdownService.register(async () => {
+            await this.$disconnect();
+        });
     }
 }
