@@ -3,9 +3,10 @@ import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ShutdownService } from '../shutdown/shutdown.service';
 import { ShutdownModule } from '../shutdown/shutdown.module';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [ShutdownModule],
-  providers: [UsersService, PrismaService, ShutdownService]
+  imports: [ShutdownModule, PrismaModule],
+  providers: [UsersService, ShutdownService]
 })
 export class UsersModule { }

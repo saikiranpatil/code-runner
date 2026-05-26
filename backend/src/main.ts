@@ -25,20 +25,20 @@ async function bootstrap() {
   const logger = app.get(Logger);
   app.useLogger(logger);
 
-  await app.listen(envConfig.port);
-
-  logger.log(`Application started at port: ${envConfig.port}`);
-
   const config = new DocumentBuilder()
-    .setTitle('Median')
-    .setDescription('The Median API description')
+    .setTitle('Code Runner')
+    .setDescription('The Code Runner API description')
     .setVersion('0.1')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
+  await app.listen(envConfig.port);
+
+  logger.log(`Application started at port: ${envConfig.port}`);
+
   const shutdown = async () => {
-    await app.close(); // stops HTTP server + triggers module cleanup
+    await app.close();
     process.exit(0);
   };
 
