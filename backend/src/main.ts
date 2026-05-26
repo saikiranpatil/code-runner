@@ -7,7 +7,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, logger: false });
+  const app = await NestFactory.create(AppModule);
 
   // graceful shutdown of application
   app.enableShutdownHooks();

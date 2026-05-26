@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '../prisma/generated/client';
 import { hash } from 'bcrypt';
 import { envConfig } from '../config';
+import { RegisterDto } from '../auth/dto/register.dto';
 
 @Injectable()
 export class UsersService {
@@ -40,33 +41,9 @@ export class UsersService {
         });
     }
 
-    async create(data: Prisma.UserCreateInput): Promise<User> {
-        const hashedPassword = await hash(data.passwordHash, envConfig.bcrypt.saltRounds);
-
-        const userData = {
-            ...data,
-            passwordHash: hashedPassword,
-        };
-
-        return this.prisma.user.create({
-            data: userData,
-        });
-    }
-
-    async update(params: {
-        where: Prisma.UserWhereUniqueInput;
-        data: Prisma.UserUpdateInput;
-    }): Promise<User> {
-        const { where, data } = params;
-        return this.prisma.user.update({
-            data,
-            where,
-        });
-    }
-
-    async deleteUser(where: Prisma.UserWhereUniqueInput): Promise<User> {
-        return this.prisma.user.delete({
-            where,
-        });
+    async create(registerDto: RegisterDto): Promise<User> {
+        const { name, email, password } = registerDto;
+        const passwordHash = await hash(password, envConfig.bcrypt.saltRounds);
+        return this.prisma.user.create({ data: { name, email, passwordHash } });
     }
 }

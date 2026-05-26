@@ -9,14 +9,11 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ShutdownModule } from './shutdown/shutdown.module';
-import { JwtModule } from '@nestjs/jwt';
-import { jwtConfig } from './config/jwt.config';
 import AuthGuardProvider from './auth/auth.provider';
 
 @Module({
   imports: [
     LoggerModule.forRoot(loggerConfig),
-    JwtModule.register(jwtConfig),
     BullModule.registerQueue({ name: QUEUE_NAMES.EXECUTIONS }),
     ShutdownModule,
     PrismaModule,
