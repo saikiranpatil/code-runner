@@ -4,15 +4,19 @@ import { AppService } from './app.service';
 import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
 import { QUEUE_NAMES } from './common/constants';
-import { loggerConfig } from './config';
+import { envConfig, loggerConfig } from './config';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ShutdownModule } from './shutdown/shutdown.module';
+import { JwtModule } from '@nestjs/jwt';
+import { jwtConfig } from './config/jwt.config';
+import AuthGuardProvider from './auth/auth.provider';
 
 @Module({
   imports: [
     LoggerModule.forRoot(loggerConfig),
+    JwtModule.register(jwtConfig),
     BullModule.registerQueue({ name: QUEUE_NAMES.EXECUTIONS }),
     ShutdownModule,
     PrismaModule,
@@ -24,6 +28,7 @@ import { ShutdownModule } from './shutdown/shutdown.module';
   ],
   providers: [
     AppService,
+    AuthGuardProvider,
   ],
 })
 export class AppModule { }

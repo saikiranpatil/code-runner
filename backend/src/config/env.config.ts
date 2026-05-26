@@ -21,6 +21,15 @@ export const envConfig = Object.freeze({
 
   database: {
     url: parsed.DATABASE_URL,
+  },
+
+  jwt: {
+    secret: parsed.JWT_SECRET,
+    expiryMs: parsed.JWT_EXPIRY_MS,
+  },
+
+  bcrypt: {
+    saltRounds: parsed.BCRYPT_SALT_ROUNDS,
   }
 });
 

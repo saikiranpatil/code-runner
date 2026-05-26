@@ -1,4 +1,11 @@
-export const LANGUAGES = {
+type LanguageTypes = {
+  [key: string]: {
+    image: string,
+    cmd: string[]
+  }
+};
+
+export const LANGUAGES: LanguageTypes = {
   javascript: {
     image: 'node:alpine',
     cmd: ['node', '--input-type=module', '-']
