@@ -43,7 +43,13 @@ export const envConfig = Object.freeze({
     clientId: parsed.GITHUB_CLIENT_ID,
     clientSecret: parsed.GITHUB_CLIENT_SECRET,
     callbackUrl: parsed.GITHUB_CALLBACK_URL,
-  }
+  },
+
+  google: {
+    clientId: parsed.GOOGLE_CLIENT_ID,
+    clientSecret: parsed.GOOGLE_CLIENT_SECRET,
+    callbackUrl: parsed.GOOGLE_CALLBACK_URL,
+  },
 });
 
 export type AppConfig = typeof envConfig;

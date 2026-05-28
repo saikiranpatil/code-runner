@@ -6,6 +6,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LocalAuthGuard } from './guards/local.guard';
 import { GithubAuthGuard } from './guards/github.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
+import { GoogleAuthGuard } from './guards/google.guard';
 
 @Public()
 @Controller('auth')
@@ -45,6 +46,16 @@ export class AuthController {
     @Get('github/callback')
     @UseGuards(GithubAuthGuard)
     async githubCallback(@Request() req) {
+        return this.authService.login(req.user);
+    }
+
+    @Get('google')
+    @UseGuards(GoogleAuthGuard)
+    async loginWithGoogle() { }
+
+    @Get('google/callback')
+    @UseGuards(GoogleAuthGuard)
+    async googleCallback(@Request() req) {
         return this.authService.login(req.user);
     }
 }

@@ -10,6 +10,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { GithubStrategy } from './strategies/github-strategy';
 import { JwtStrategy } from './strategies/jwt.stratedy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { GoogleStrategy } from './strategies/google-strategy';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
     UsersService,
     LocalStrategy,
     GithubStrategy,
+    GoogleStrategy,
     JwtStrategy,
     JwtRefreshStrategy,
   ],
