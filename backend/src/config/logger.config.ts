@@ -6,10 +6,11 @@ export const loggerConfig: LoggerParams = {
     pinoHttp: {
         customProps: () => ({ context: 'HTTP' }), // disabled now
         transport:
-            envConfig.nodeEnv === NODE_ENVS.DEVELOPMENT
+            envConfig.app.nodeEnv === NODE_ENVS.DEVELOPMENT
                 ? {
                     target: 'pino-pretty',
-                    options: { singleLine: true, colorize: true },
+                    // options: { singleLine: true, colorize: true },
+                    options: { colorize: true },
                 } : undefined,
     },
 };

@@ -7,7 +7,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, autoFlushLogs: true });
+
+  app.enableCors({
+    origin: envConfig.app.corsAllowedOrigins || [],
+    credentials: true,
+  });
 
   // graceful shutdown of application
   app.enableShutdownHooks();
@@ -33,9 +38,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(envConfig.port);
+  await app.listen(envConfig.app.port);
 
-  logger.log(`Application started at port: ${envConfig.port}`);
+  logger.log(`Application started at ${envConfig.app.port}`);
 
   const shutdown = async () => {
     await app.close();

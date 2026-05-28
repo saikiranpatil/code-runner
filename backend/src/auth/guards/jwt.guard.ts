@@ -1,10 +1,10 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { IS_PUBLIC_KEY } from '../common/constants'; // Your public key constant
+import { IS_PUBLIC_KEY, STRATEGY_NAME } from '../../common/constants';
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {
+export class JwtAuthGuard extends AuthGuard(STRATEGY_NAME.JWT) {
   constructor(private reflector: Reflector) {
     super();
   }
@@ -20,7 +20,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     const canActivate = await super.canActivate(context);
-    console.log("canActivate", canActivate);
     return canActivate as boolean;
   }
 }
