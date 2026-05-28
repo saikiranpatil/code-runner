@@ -42,6 +42,7 @@ export const envConfig = Object.freeze({
   github: {
     clientId: parsed.GITHUB_CLIENT_ID,
     clientSecret: parsed.GITHUB_CLIENT_SECRET,
+    callbackUrl: parsed.GITHUB_CALLBACK_URL,
   }
 });
 

@@ -4,6 +4,7 @@ import { Prisma, User } from '../prisma/generated/client';
 import { hash } from 'bcrypt';
 import { envConfig } from '../config';
 import { RegisterDto } from '../auth/dto/register.dto';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class UsersService {
@@ -47,6 +48,18 @@ export class UsersService {
     async delete(where: Prisma.UserWhereUniqueInput): Promise<User> {
         return this.prisma.user.delete({
             where,
+        });
+    }
+
+    async createOAuthUser(data: { email: string; name: string }): Promise<User> {
+        const passwordHash = await hash(randomBytes(32).toString('hex'), 10);
+        return this.prisma.user.create({
+            data: {
+                email: data.email,
+                name: data.name,
+                passwordHash,
+                emailVerified: true,
+            },
         });
     }
 }

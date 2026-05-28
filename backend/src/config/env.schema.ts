@@ -28,8 +28,9 @@ export const envSchema = z.object({
     BCRYPT_SALT_ROUNDS: z.coerce.number().default(10),
 
     // github
-    GITHUB_CLIENT_ID: z.string(),
-    GITHUB_CLIENT_SECRET: z.string(),
+    GITHUB_CLIENT_ID: z.string().min(1),
+    GITHUB_CLIENT_SECRET: z.string().min(1),
+    GITHUB_CALLBACK_URL: z.url(),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;

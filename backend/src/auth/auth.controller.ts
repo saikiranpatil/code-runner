@@ -7,6 +7,7 @@ import { LocalAuthGuard } from './guards/local.guard';
 import { GithubAuthGuard } from './guards/github.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 
+@Public()
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
@@ -14,14 +15,12 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @UseGuards(LocalAuthGuard)
     @Post('login')
-    @Public()
     login(@Request() req) {
         return this.authService.login(req.user);
     }
 
     @HttpCode(HttpStatus.OK)
     @UseGuards(JwtRefreshGuard)
-    @Public()
     @Post('refresh')
     refresh(@Request() req) {
         return this.authService.refresh(req.user);
@@ -41,14 +40,11 @@ export class AuthController {
 
     @Get('github')
     @UseGuards(GithubAuthGuard)
-    async loginWithGithub() {
-        // This triggers the redirect to GitHub
-    }
+    async loginWithGithub() { }
 
     @Get('github/callback')
     @UseGuards(GithubAuthGuard)
     async githubCallback(@Request() req) {
-        // req.user contains the data returned from the validate method
-        return req.user;
+        return this.authService.login(req.user);
     }
 }
