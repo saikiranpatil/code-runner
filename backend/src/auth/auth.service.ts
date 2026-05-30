@@ -1,10 +1,12 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcrypt';
 import { User } from '../prisma/generated/client';
 import { envConfig } from '../config';
+import { JwtPayload, JwtRefreshPayload } from '../common/types';
 
+type SafeUser = Omit<User, 'passwordHash' | 'refreshTokenHash'>;
 @Injectable()
 export class AuthService {
     constructor(
@@ -46,8 +48,8 @@ export class AuthService {
         });
     }
 
-    async validateRefreshToken(userId: number, token: string): Promise<User> {
-        const user = await this.usersService.findUnique({ id: userId });
+    async validateRefreshToken(userId: number, token: string): Promise<SafeUser> {
+        const user = await this.usersService.findById(userId);
         if (!user || !user.refreshTokenHash) {
             throw new ForbiddenException();
         }
@@ -57,15 +59,25 @@ export class AuthService {
             throw new ForbiddenException();
         }
 
-        return user;
+        const { passwordHash, refreshTokenHash, ...result } = user;
+        return result;
     }
 
     private async generateTokens(userId: number, email: string): Promise<{ accessToken: string, refreshToken: string }> {
-        const payload = { sub: userId, email };
-        
+        const accessTokenPayload: JwtPayload = {
+            type: 'access',
+            sub: userId,
+            email,
+        };
+
+        const refreshTokenPayload: JwtRefreshPayload = {
+            type: 'refresh',
+            sub: userId,
+        };
+
         const [accessToken, refreshToken] = await Promise.all([
-            this.jwtService.sign(payload),
-            this.jwtService.sign(payload, {
+            this.jwtService.sign(accessTokenPayload),
+            this.jwtService.sign(refreshTokenPayload, {
                 secret: envConfig.jwtRefresh.secret,
                 expiresIn: envConfig.jwtRefresh.expiryMs,
             }),

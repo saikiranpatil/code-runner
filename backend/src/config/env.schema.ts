@@ -20,9 +20,9 @@ export const envSchema = z.object({
 
     // jwt
     JWT_SECRET: z.string(),
-    JWT_EXPIRY_MS: z.coerce.number().default(60 * 1000),
+    JWT_EXPIRY_MS: z.coerce.number().default(15 * 60 * 1000),
     JWT_REFRESH_SECRET: z.string(),
-    JWT_REFRESH_EXPIRY_MS: z.coerce.number().default(5 * 24 * 60 * 1000),
+    JWT_REFRESH_EXPIRY_MS: z.coerce.number().default(7 * 24 * 60 * 1000),
 
     // bcrypt
     BCRYPT_SALT_ROUNDS: z.coerce.number().default(10),

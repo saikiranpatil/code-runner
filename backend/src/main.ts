@@ -5,6 +5,7 @@ import { Logger } from 'nestjs-pino';
 import { HttpExceptionFilter } from './http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true, autoFlushLogs: true });
@@ -13,6 +14,8 @@ async function bootstrap() {
     origin: envConfig.app.corsAllowedOrigins || [],
     credentials: true,
   });
+
+  app.use(cookieParser());
 
   // graceful shutdown of application
   app.enableShutdownHooks();

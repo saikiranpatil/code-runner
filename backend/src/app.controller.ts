@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ExecutionDto } from './execution/dto/execution.dto';
 
@@ -9,6 +9,11 @@ export class AppController {
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @Get('profile')
+  getProfile(@Req() req: { user: string }) {
+    return req.user;
   }
 
   @Post("execute")

@@ -10,11 +10,9 @@ import { randomBytes } from 'crypto';
 export class UsersService {
     constructor(private prisma: PrismaService) { }
 
-    async findUnique(
-        userWhereUniqueInput: Prisma.UserWhereUniqueInput,
-    ): Promise<User | null> {
+    async findById(id: number): Promise<User | null> {
         return this.prisma.user.findUnique({
-            where: userWhereUniqueInput,
+            where: { id: id },
         });
     }
 
