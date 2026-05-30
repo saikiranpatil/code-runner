@@ -6,6 +6,8 @@ import App from "./App.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { TooltipProvider } from "./components/ui/tooltip.tsx"
 
+import { BrowserRouter } from "react-router-dom";
+
 import {
   QueryClient,
   QueryClientProvider,
@@ -18,7 +20,9 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider>
       <TooltipProvider>
         <QueryClientProvider client={queryClient}>
-          <App />
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
         </QueryClientProvider>
       </TooltipProvider>
     </ThemeProvider>
