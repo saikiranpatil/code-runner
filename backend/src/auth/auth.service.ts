@@ -37,7 +37,7 @@ export class AuthService {
 
     async refresh(user: User) {
         const tokens = await this.generateTokens(user.id, user.email);
-        await this.storeRefreshToken(user.id, tokens.refreshToken); // Token rotation
+        await this.storeRefreshToken(user.id, tokens.refreshToken);
         return tokens;
     }
 

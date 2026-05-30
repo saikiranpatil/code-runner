@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, Post, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Post, Req, Request, Res, Response, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from './auth.decorators';
 import { LocalAuthGuard } from './guards/local.guard';
@@ -6,6 +6,8 @@ import { GithubAuthGuard } from './guards/github.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { GoogleAuthGuard } from './guards/google.guard';
 import { JwtAuthGuard } from './guards/jwt.guard';
+import { envConfig } from '../config';
+import { NODE_ENVS } from '../common/constants';
 
 @Controller('auth')
 export class AuthController {
@@ -15,15 +17,30 @@ export class AuthController {
     @Post('login')
     @HttpCode(HttpStatus.OK)
     @UseGuards(LocalAuthGuard)
-    login(@Request() req) {
-        return this.authService.login(req.user);
+    async login(@Req() req, @Res({ passthrough: true }) res) {
+        const user = req.user;
+        const { accessToken, refreshToken } = await this.authService.login(user);
+
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: envConfig.app.nodeEnv === NODE_ENVS.PRODUCTION,
+            sameSite: 'strict',
+            path: '/auth/refresh',
+            maxAge: envConfig.jwtRefresh.expiryMs
+        });
+
+        return { accessToken };
     }
 
     @Post('logout')
     @HttpCode(HttpStatus.OK)
     @UseGuards(JwtAuthGuard)
-    async logout(@Request() req) {
+    async logout(@Request() req, @Response() res) {
         await this.authService.logout(req.user.id);
+        res.clearCookie('refresh_token', {
+            path: '/auth/refresh',
+        });
+
         return { message: 'Logged out successfully' };
     }
 
