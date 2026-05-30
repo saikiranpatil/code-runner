@@ -26,6 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, STRATEGY_NAME.JWT) {
             throw new UnauthorizedException();
         }
 
-        return user;
+        const { passwordHash, emailVerified, refreshTokenHash, ...safeUser } = user;
+        return safeUser;
     }
 }
