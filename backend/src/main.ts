@@ -27,8 +27,6 @@ async function bootstrap() {
   }));
   // global constient exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
-  // enable CORS
-  app.enableCors();
 
   const logger = app.get(Logger);
   app.useLogger(logger);
@@ -44,6 +42,7 @@ async function bootstrap() {
   await app.listen(envConfig.app.port);
 
   logger.log(`Application started at ${envConfig.app.port}`);
+  logger.log(envConfig, 'envConfig');
 
   const shutdown = async () => {
     await app.close();

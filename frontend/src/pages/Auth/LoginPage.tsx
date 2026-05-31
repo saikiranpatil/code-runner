@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,6 +16,11 @@ import { Separator } from '@/components/ui/separator';
 
 import { URLs } from '@/shared/urls';
 import { loginSchema, type LoginFormValues } from '@/shared/schemas/auth.schema';
+import { useMutation } from '@tanstack/react-query';
+import { mutate } from '@/utils/request/mutate';
+import { ENDPOINTS } from '@/api/endpoints';
+import useAuthStore from '@/store/authStore';
+import type { LoginResponseDto } from './dto/login.dto';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -35,21 +40,29 @@ const itemVariants: Variants = {
 };
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '', remember: false },
+    defaultValues: { email: '', password: '', rememberMe: false },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
-    // Replace with real auth logic
-    await new Promise((r) => setTimeout(r, 1200));
-    console.log(data);
-  };
+  const { mutate: handleLogin, isPending } = useMutation<LoginResponseDto, Error, LoginFormValues>({
+    mutationFn: mutate(ENDPOINTS.AUTH.LOGIN),
+    onSuccess: (data) => {
+      console.log("SUCCESS", data);
+      navigate(URLs.home.base);
+    },
+    onError: (error) => {
+      console.error("LOGIN ERROR", error);
+    },
+  });
+
+  const onSubmit = (data: LoginFormValues) => { handleLogin(data) };
 
   return (
     <div className="flex flex-col justify-center h-full px-8 py-12 sm:px-12 lg:px-16 xl:px-20">
@@ -146,11 +159,11 @@ export default function LoginPage() {
           {/* Remember me */}
           <motion.div variants={itemVariants} className="flex items-center gap-2">
             <Controller
-              name="remember"
+              name="rememberMe"
               control={control}
               render={({ field }) => (
                 <Checkbox
-                  id="remember"
+                  id="rememberMe"
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />
@@ -166,8 +179,8 @@ export default function LoginPage() {
 
           {/* Submit */}
           <motion.div variants={itemVariants}>
-            <Button type="submit" className="w-full h-10" disabled={isSubmitting}>
-              {isSubmitting ? (
+            <Button type="submit" className="w-full h-10" disabled={isPending}>
+              {isPending ? (
                 <span className="flex items-center gap-2">
                   <ImSpinner2 className="h-4 w-4 animate-spin" />
                   Signing in...

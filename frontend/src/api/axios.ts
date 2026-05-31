@@ -54,7 +54,7 @@ api.interceptors.response.use(
         const status = error.response?.status;
         const requestUrl = originalRequest.url ?? "";
 
-        if (requestUrl.includes(ENDPOINTS.auth.refreshToken)) {
+        if (requestUrl.includes(ENDPOINTS.AUTH.REFRESH.path)) {
             return Promise.reject(error);
         }
 
@@ -79,7 +79,7 @@ api.interceptors.response.use(
 
         try {
             const response = await api.post<ApiResponse<AuthData>>(
-                ENDPOINTS.auth.refreshToken
+                ENDPOINTS.AUTH.REFRESH.path
             );
             const newToken = response.data.data.accessToken;
             setToken(newToken);

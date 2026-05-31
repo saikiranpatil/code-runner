@@ -1,18 +1,20 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
-
 import { FaGithub } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import { HiCubeTransparent } from 'react-icons/hi2';
 import { ImSpinner2 } from 'react-icons/im';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-
 import { URLs } from '@/shared/urls';
+import { registerSchema, type RegisterFormValues } from '@/shared/schemas/auth.schema';
+import { mutate } from '@/utils/request/mutate';
+import { useMutation } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ENDPOINTS } from '@/api/endpoints';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -35,17 +37,17 @@ const itemVariants: Variants = {
 };
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { email: '', password: '', confirmPassword: '', name: '' },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-  };
+  const { mutate: handleRegister, isPending } = useMutation({ mutationFn: mutate(ENDPOINTS.AUTH.REGISTER) });
+  const onSubmit = (data: RegisterFormValues) => { handleRegister(data) };
 
   return (
     <div className="flex flex-col justify-center h-full px-8 py-12 sm:px-12 lg:px-16 xl:px-20">
@@ -72,12 +74,10 @@ export default function RegisterPage() {
         {/* OAuth */}
         <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 mb-6">
           <Button variant="outline" className="w-full h-10 font-normal text-sm gap-2" type="button">
-            <FcGoogle className="w-4 h-4 shrink-0" />
-            Google
+            <FcGoogle className="w-4 h-4 shrink-0" /> Google
           </Button>
           <Button variant="outline" className="w-full h-10 font-normal text-sm gap-2" type="button">
-            <FaGithub className="w-4 h-4 shrink-0 text-foreground" />
-            GitHub
+            <FaGithub className="w-4 h-4 shrink-0 text-foreground" /> GitHub
           </Button>
         </motion.div>
 
@@ -90,49 +90,79 @@ export default function RegisterPage() {
         </motion.div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <motion.div variants={itemVariants} className="space-y-1.5">
             <Label htmlFor="name" className="text-sm font-medium">Full name</Label>
             <Input
-              id="name" type="text" placeholder="Sahil Kumar"
-              autoComplete="name" required value={name}
-              onChange={(e) => setName(e.target.value)} className="h-10"
+              id="name"
+              type="text"
+              placeholder="Sahil Kumar"
+              autoComplete="name"
+              className="h-10"
+              {...register('name')}
             />
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </motion.div>
 
           <motion.div variants={itemVariants} className="space-y-1.5">
             <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
             <Input
-              id="email" type="email" placeholder="you@example.com"
-              autoComplete="email" required value={email}
-              onChange={(e) => setEmail(e.target.value)} className="h-10"
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              className="h-10"
+              {...register('email')}
             />
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </motion.div>
 
           <motion.div variants={itemVariants} className="space-y-1.5">
             <Label htmlFor="password" className="text-sm font-medium">Password</Label>
             <Input
-              id="password" type="password" placeholder="••••••••"
-              autoComplete="new-password" required value={password}
-              onChange={(e) => setPassword(e.target.value)} className="h-10"
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="h-10"
+              {...register('password')}
             />
+            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+          </motion.div>
+
+          {/* Confirm Password — add this if it exists in your schema/values */}
+          <motion.div variants={itemVariants} className="space-y-1.5">
+            <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="h-10"
+              {...register('confirmPassword')}
+            />
+            {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <Button type="submit" className="w-full h-10" disabled={loading}>
-              {loading ? (
+            <Button type="submit" className="w-full h-10" disabled={isPending}>
+              {isPending ? (
                 <span className="flex items-center gap-2">
-                  <ImSpinner2 className="h-4 w-4 animate-spin" />
-                  Creating account...
+                  <ImSpinner2 className="h-4 w-4 animate-spin" /> Creating account...
                 </span>
-              ) : 'Create account'}
+              ) : (
+                'Create account'
+              )}
             </Button>
           </motion.div>
         </form>
 
         <motion.p variants={itemVariants} className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link to={URLs.auth.login} className="font-medium text-foreground hover:underline underline-offset-4 transition-colors">
+          <Link
+            to={URLs.auth.login}
+            className="font-medium text-foreground hover:underline underline-offset-4 transition-colors"
+          >
             Sign in
           </Link>
         </motion.p>

@@ -1,16 +1,24 @@
 import { QueryClient, MutationCache, QueryCache } from "@tanstack/react-query";
 import { parseApiError } from "@/utils/errorHandler";
+import { toast } from "sonner";
 
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
       mutation.meta;
-      return parseApiError(error);
+      const { message } = parseApiError(error);
+      if (message) toast.error(message);
+    },
+    onSuccess: (_data, _variables, _context, mutation) => {
+      if (mutation.meta?.successMessage) {
+        toast.success(mutation.meta.successMessage as string);
+      }
     },
   }),
   queryCache: new QueryCache({
     onError: (error) => {
-      return parseApiError(error);
+      const { message } = parseApiError(error);
+      toast.error(message || "Failed to fetch data");
     },
   }),
   defaultOptions: {

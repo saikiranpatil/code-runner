@@ -29,7 +29,7 @@ export class AuthController {
             maxAge: envConfig.jwtRefresh.expiryMs
         });
 
-        return { accessToken };
+        return { user, accessToken };
     }
 
     @Post('logout')

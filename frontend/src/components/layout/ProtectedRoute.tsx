@@ -1,32 +1,13 @@
-import { useEffect, useRef } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-
-import useAuth from "@/hooks/useAuth";
+import useAuthStore from "@/store/authStore";
 import Spinner from "@/components/ui/spinner";
-import { ENDPOINTS } from "@/api/endpoints";
+import { URLs } from "@/shared/urls";
 
 const ProtectedRoute = () => {
-    const { isAuthenticated, isInitializing, restoreSession } = useAuth();
-    const hasChecked = useRef(false);
+    const { isAuthenticated, isInitializing } = useAuthStore();
 
-    useEffect(() => {
-        if (hasChecked.current) return;
-        hasChecked.current = true;
-        void restoreSession();
-    }, [restoreSession]);
-
-    if (isInitializing) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-                <Spinner size="lg" />
-            </div>
-        );
-    }
-
-    if (!isAuthenticated) {
-        return <Navigate to={ENDPOINTS.auth.login} replace />;
-    }
-
+    if (isInitializing) return <Spinner />;
+    if (!isAuthenticated) return <Navigate to={URLs.auth.login} replace />;
     return <Outlet />;
 };
 
