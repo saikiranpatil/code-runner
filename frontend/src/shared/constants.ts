@@ -16,3 +16,5 @@ export const LANGUAGES = [
     { label: 'C++', value: 'cpp' },
     { label: 'C', value: 'c' },
 ]
+
+export const ACCESS_TOKEN_KEY = "access_token";
