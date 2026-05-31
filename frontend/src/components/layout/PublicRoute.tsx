@@ -1,12 +1,11 @@
-// src/components/layout/PublicRoute.tsx
 import { Navigate, Outlet } from "react-router-dom";
-import useAuthStore from "@/store/authStore";
 import Spinner from "@/components/ui/spinner";
+import { useAuthStore } from "@/module/auth/auth.store";
 
 const PublicRoute = () => {
-  const { isAuthenticated, isInitializing } = useAuthStore();
+  const { isAuthenticated, status } = useAuthStore();
 
-  if (isInitializing) return <Spinner />;
+  if (status === "loading") return <Spinner />;
   if (isAuthenticated) return <Navigate to="/problem" replace />;
   return <Outlet />;
 };

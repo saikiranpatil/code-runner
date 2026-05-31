@@ -30,9 +30,9 @@ export class AuthService {
     }
 
     async login(user: User) {
-        const tokens = await this.generateTokens(user.id, user.email);
-        await this.storeRefreshToken(user.id, tokens.refreshToken);
-        return tokens;
+        const res = await this.generateTokens(user.id, user.email);
+        await this.storeRefreshToken(user.id, res.refreshToken);
+        return res;
     }
 
     async refresh(user: User) {
@@ -63,7 +63,7 @@ export class AuthService {
         return result;
     }
 
-    private async generateTokens(userId: number, email: string): Promise<{ accessToken: string, refreshToken: string }> {
+    private async generateTokens(userId: number, email: string): Promise<{ accessToken: string, refreshToken: string, expiresIn: number }> {
         const accessTokenPayload: JwtPayload = {
             type: 'access',
             sub: userId,
@@ -83,7 +83,7 @@ export class AuthService {
             }),
         ]);
 
-        return { accessToken, refreshToken };
+        return { accessToken, refreshToken, expiresIn: envConfig.jwtRefresh.expiryMs };
     }
 
     private async storeRefreshToken(userId: number, token: string) {

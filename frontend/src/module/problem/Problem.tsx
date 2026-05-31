@@ -1,3 +1,5 @@
+import { useState } from "react"
+
 import {
     Play,
     Check,
@@ -9,14 +11,12 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-
 import {
     Tabs,
     TabsContent,
     TabsList,
     TabsTrigger,
 } from "@/components/ui/tabs"
-
 import {
     Select,
     SelectContent,
@@ -25,21 +25,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-
 import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
-
 import { Badge } from "@/components/ui/badge"
-
 import { ScrollArea } from "@/components/ui/scroll-area"
-
 import { Separator } from "@/components/ui/separator"
-
 import CodeEditor from "@/components/code-editor"
-import { useState } from "react"
 
 import { useMutation } from "@tanstack/react-query"
 import { LANGUAGES } from "@/shared/constants"

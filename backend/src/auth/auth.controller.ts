@@ -19,23 +19,17 @@ export class AuthController {
     @UseGuards(LocalAuthGuard)
     async login(@Req() req, @Res({ passthrough: true }) res) {
         const user = req.user;
-        const { accessToken, refreshToken } = await this.authService.login(user);
+        const { accessToken, refreshToken, expiresIn } = await this.authService.login(user);
 
-        res.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: envConfig.app.nodeEnv === NODE_ENVS.PRODUCTION,
-            sameSite: 'strict',
-            path: '/auth/refresh',
-            maxAge: envConfig.jwtRefresh.expiryMs
-        });
+        this.setRefreshCookie(res, refreshToken);
 
-        return { user, accessToken };
+        return { user, accessToken, expiresIn };
     }
 
     @Post('logout')
     @HttpCode(HttpStatus.OK)
     @UseGuards(JwtAuthGuard)
-    async logout(@Request() req, @Response() res) {
+    async logout(@Request() req, @Res({ passthrough: true }) res) {
         await this.authService.logout(req.user.id);
         res.clearCookie('refresh_token', {
             path: '/auth/refresh',
@@ -48,8 +42,8 @@ export class AuthController {
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
     @UseGuards(JwtRefreshGuard)
-    refresh(@Request() req) {
-        return this.authService.refresh(req.user);
+    async refresh(@Request() req) {
+        return await this.authService.refresh(req.user);
     }
 
     // @HttpCode(HttpStatus.OK)
@@ -81,5 +75,15 @@ export class AuthController {
     @UseGuards(GoogleAuthGuard)
     async googleCallback(@Request() req) {
         return this.authService.login(req.user);
+    }
+
+    private setRefreshCookie(res: any, refreshToken: string) {
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: envConfig.app.nodeEnv === NODE_ENVS.PRODUCTION,
+            sameSite: 'strict',
+            path: '/auth/refresh',
+            maxAge: envConfig.jwtRefresh.expiryMs,
+        });
     }
 }

@@ -1,8 +1,29 @@
 import axios from "axios";
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
-import { getToken, setToken, removeToken } from "@/utils/token";
-import type { ApiResponse, AuthData } from "@/types/api.types";
+
 import { ENDPOINTS } from "@/api/endpoints";
+import type { AuthData } from "@/module/auth/auth.types";
+import { getAuthState } from "@/module/auth/auth.store";
+import type { RefreshResponse } from "@/module/auth/auth.dto";
+
+interface QueueEntry {
+    resolve: (value: AxiosResponse) => void;
+    reject: (reason: unknown) => void;
+}
+
+let isRefreshing = false;
+let failedQueue: QueueEntry[] = [];
+
+const flushQueue = (error: unknown, token: string | null = null): void => {
+    for (const entry of failedQueue) {
+        if (token) {
+            entry.resolve(token as unknown as AxiosResponse);
+        } else {
+            entry.reject(error);
+        }
+    }
+    failedQueue = [];
+};
 
 const api: AxiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL as string,
@@ -14,7 +35,7 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        const token = getToken();
+        const token = getAuthState().getToken();
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -22,23 +43,6 @@ api.interceptors.request.use(
     },
     (error: unknown) => Promise.reject(error)
 );
-
-let isRefreshing = false;
-let failedQueue: {
-    resolve: (token: string) => void;
-    reject: (error: unknown) => void;
-}[] = [];
-
-const processQueue = (error: unknown, token: string | null = null): void => {
-    failedQueue.forEach((promise) => {
-        if (error) {
-            promise.reject(error);
-        } else if (token) {
-            promise.resolve(token);
-        }
-    });
-    failedQueue = [];
-};
 
 api.interceptors.response.use(
     (response: AxiosResponse) => response,
@@ -63,10 +67,11 @@ api.interceptors.response.use(
         }
 
         if (isRefreshing) {
-            return new Promise((resolve, reject) => {
+            return new Promise<AxiosResponse>((resolve, reject) => {
                 failedQueue.push({
-                    resolve: (token: string) => {
-                        originalRequest.headers.Authorization = `Bearer ${token}`;
+                    resolve: (_ignored) => {
+                        const token = getAuthState().getToken();
+                        if (token) originalRequest.headers.Authorization = `Bearer ${token}`;
                         resolve(api(originalRequest));
                     },
                     reject,
@@ -78,18 +83,18 @@ api.interceptors.response.use(
         isRefreshing = true;
 
         try {
-            const response = await api.post<ApiResponse<AuthData>>(
+            const { data } = await api.post<RefreshResponse>(
                 ENDPOINTS.AUTH.REFRESH.path
             );
-            const newToken = response.data.data.accessToken;
-            setToken(newToken);
-            processQueue(null, newToken);
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            const { user, accessToken, expiresIn } = data;
+            getAuthState().handleLogin(user, accessToken, expiresIn);
+
+            flushQueue(null, accessToken);
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return api(originalRequest);
         } catch (refreshError) {
-            processQueue(refreshError, null);
-            removeToken();
-            window.dispatchEvent(new Event("auth:logout"));
+            getAuthState().handleLogout();
+            flushQueue(refreshError, null);
             return Promise.reject(refreshError);
         } finally {
             isRefreshing = false;

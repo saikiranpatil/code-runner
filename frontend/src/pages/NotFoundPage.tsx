@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ENDPOINTS } from "@/api/endpoints";
+import { URLs } from "@/shared/urls";
 
 const NotFoundPage = () => {
     return (
@@ -20,7 +20,7 @@ const NotFoundPage = () => {
                     </p>
                 </div>
 
-                <Link to={ENDPOINTS.home.base}>
+                <Link to={URLs.home.base}>
                     <Button variant="secondary">Go to Dashboard</Button>
                 </Link>
             </motion.div>

@@ -10,7 +10,6 @@ import App from "./App.tsx"
 
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { TooltipProvider } from "@/components/ui/tooltip.tsx"
-import { AuthProvider } from "@/context/AuthContext.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx"
 
 import queryClient from "@/lib/queryClient.ts"
@@ -21,9 +20,7 @@ createRoot(document.getElementById("root")!).render(
       <TooltipProvider>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
-            <AuthProvider>
-              <App />
-            </AuthProvider>
+            <App />
             <Toaster />
           </BrowserRouter>
         </QueryClientProvider>

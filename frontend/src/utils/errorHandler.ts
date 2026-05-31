@@ -1,11 +1,11 @@
-import type { ApiErrorResponse } from "@/types/api.types";
+import type { ApiErrorResponse } from "@/api/types";
 import type { AxiosError } from "axios";
 
 export interface ParsedError {
   message: string;
   errors: string[];
   statusCode: number;
-}
+};
 
 export const parseApiError = (error: unknown): ParsedError => {
   // Axios error with a response from the server

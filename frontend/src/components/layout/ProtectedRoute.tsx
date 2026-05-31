@@ -1,12 +1,23 @@
 import { Navigate, Outlet } from "react-router-dom";
-import useAuthStore from "@/store/authStore";
 import Spinner from "@/components/ui/spinner";
 import { URLs } from "@/shared/urls";
+import {
+    selectAuthStatus,
+    selectIsAuthenticated,
+    useAuthStore,
+} from "@/module/auth/auth.store";
+import { useEffect } from "react";
 
 const ProtectedRoute = () => {
-    const { isAuthenticated, isInitializing } = useAuthStore();
+    const init = useAuthStore((state) => state.init);
+    const status = useAuthStore(selectAuthStatus);
+    const isAuthenticated = useAuthStore(selectIsAuthenticated);
 
-    if (isInitializing) return <Spinner />;
+    useEffect(() => {
+        if (status === "idle") init();
+    }, [status, init]);
+
+    if (status === "idle" || status === "loading") return <Spinner />;
     if (!isAuthenticated) return <Navigate to={URLs.auth.login} replace />;
     return <Outlet />;
 };
