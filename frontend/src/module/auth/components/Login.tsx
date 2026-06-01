@@ -1,18 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { FaGithub } from 'react-icons/fa';
-import { FcGoogle } from 'react-icons/fc';
-import { HiCubeTransparent } from 'react-icons/hi2';
 import { ImSpinner2 } from 'react-icons/im';
 
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 
 import { URLs } from '@/shared/urls';
 import { ENDPOINTS } from '@/api/endpoints';
@@ -47,7 +42,6 @@ export default function Login() {
     const {
         register,
         handleSubmit,
-        control,
         formState: { errors },
     } = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -61,12 +55,8 @@ export default function Login() {
     const { mutate: handleLogin, isPending } = useMutation({
         mutationFn: mutate(ENDPOINTS.AUTH.LOGIN),
         onSuccess: (data: LoginResponse) => {
-            console.log('LOGIN SUCCESS', data);
             login(data.user, data.accessToken, data.expiresIn);
             navigate(URLs.home.base);
-        },
-        onError: (error) => {
-            console.error('LOGIN ERROR', error);
         },
     });
 
@@ -129,13 +119,6 @@ export default function Login() {
                         <Label htmlFor="password">
                             Password
                         </Label>
-
-                        <button
-                            type="button"
-                            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-                        >
-                            Forgot password?
-                        </button>
                     </div>
 
                     <Input
@@ -152,33 +135,6 @@ export default function Login() {
                             {errors.password.message}
                         </p>
                     )}
-                </motion.div>
-
-                {/* Remember Me */}
-                <motion.div
-                    variants={itemVariants}
-                    className="flex items-center gap-2"
-                >
-                    <Controller
-                        name="rememberMe"
-                        control={control}
-                        render={({ field }) => (
-                            <Checkbox
-                                id="rememberMe"
-                                checked={field.value}
-                                onCheckedChange={(checked) =>
-                                    field.onChange(Boolean(checked))
-                                }
-                            />
-                        )}
-                    />
-
-                    <Label
-                        htmlFor="rememberMe"
-                        className="cursor-pointer text-sm font-normal text-muted-foreground"
-                    >
-                        Remember me for 30 days
-                    </Label>
                 </motion.div>
 
                 {/* Submit */}

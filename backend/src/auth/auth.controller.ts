@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, Post, Req, Request, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Request, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from './auth.decorators';
 import { LocalAuthGuard } from './guards/local.guard';
@@ -9,6 +9,7 @@ import { JwtAuthGuard } from './guards/jwt.guard';
 import { envConfig } from '../config';
 import { COOKIE_NAME, NODE_ENVS } from '../common/constants';
 import { User } from '../prisma/generated/client';
+import { RegisterDto } from './dto/register.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -43,12 +44,12 @@ export class AuthController {
         return await this.authService.refresh(req.user);
     }
 
-    // @HttpCode(HttpStatus.OK)
-    // @Post('register')
-    // @Public()
-    // register(@Body() registerDto: RegisterDto) {
-    //     return this.authService.register(registerDto);
-    // }
+    @HttpCode(HttpStatus.OK)
+    @Post('register')
+    @Public()
+    register(@Body() registerDto: RegisterDto) {
+        return this.authService.register(registerDto);
+    }
 
     @Public()
     @Get('github')

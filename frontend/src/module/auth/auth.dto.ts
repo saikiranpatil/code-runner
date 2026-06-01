@@ -11,3 +11,9 @@ export interface LoginResponse {
     accessToken: string;
     expiresIn: number;
 }
+
+export interface RegisterResponse {
+    user: User;
+    accessToken: string;
+    expiresIn: number;
+}

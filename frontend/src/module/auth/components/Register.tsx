@@ -20,6 +20,8 @@ import {
     type RegisterFormValues,
 } from '@/module/auth/schema/register.schema';
 import AuthFormLayout from '@/components/layout/AuthFormLayout';
+import { useAuthStore } from '../auth.store';
+import type { RegisterResponse } from '../auth.dto';
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },
@@ -35,6 +37,7 @@ const itemVariants: Variants = {
 
 export default function Register() {
     const navigate = useNavigate();
+    const login = useAuthStore(store => store.handleLogin);
 
     const {
         register,
@@ -52,15 +55,10 @@ export default function Register() {
 
     const { mutate: handleRegister, isPending } = useMutation({
         mutationFn: mutate(ENDPOINTS.AUTH.REGISTER),
-
-        onSuccess: (data) => {
-            console.log('REGISTER SUCCESS', data);
-
-            navigate(URLs.auth.login);
-        },
-
-        onError: (error) => {
-            console.error('REGISTER ERROR', error);
+        onSuccess: (data: RegisterResponse) => {
+            console.log("REGISTER SUCCESS DATA", data);
+            login(data.user, data.accessToken, data.expiresIn);
+            navigate(URLs.home.base);
         },
     });
 

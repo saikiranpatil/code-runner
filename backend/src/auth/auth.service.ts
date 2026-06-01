@@ -5,6 +5,7 @@ import { compare, hash } from 'bcrypt';
 import { User } from '../prisma/generated/client';
 import { envConfig } from '../config';
 import { JwtPayload, JwtRefreshPayload } from '../common/types';
+import { RegisterDto } from './dto/register.dto';
 
 type SafeUser = Omit<User, 'passwordHash' | 'refreshTokenHash'>;
 @Injectable()
@@ -33,6 +34,11 @@ export class AuthService {
         const res = await this.generateTokens(user.id, user.email);
         await this.storeRefreshToken(user.id, res.refreshToken);
         return res;
+    }
+
+    async register(registerDto: RegisterDto) {
+        const user = await this.usersService.create(registerDto);
+        return this.login(user);
     }
 
     async refresh(user: User) {
