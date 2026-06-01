@@ -15,7 +15,8 @@ export const envSchema = z.object({
     NODE_ENV: z.enum([NODE_ENVS.DEVELOPMENT, NODE_ENVS.PRODUCTION]).default(NODE_ENVS.DEVELOPMENT),
     PORT: z.coerce.number().default(3000),
     CORS_ALLOWED_ORIGINS: z.string().transform(value => value.split(',').map(String)),
-
+    FRONTEND_URL: z.url().default("http://localhost:5173/"),
+    
     // redis
     REDIS_HOST: z.string().default('localhost'),
     REDIS_PORT: z.coerce.number().default(6379),

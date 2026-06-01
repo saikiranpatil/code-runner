@@ -26,17 +26,7 @@ import {
 } from '@/module/auth/schema/login.schema';
 import { useAuthStore } from '../auth.store';
 import type { LoginResponse } from '../auth.dto';
-
-const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.07,
-            delayChildren: 0.1,
-        },
-    },
-};
+import AuthFormLayout from '@/components/layout/AuthFormLayout';
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },
@@ -85,188 +75,11 @@ export default function Login() {
     };
 
     return (
-        <div className="flex h-full flex-col justify-center px-8 py-12 sm:px-12 lg:px-16 xl:px-20">
-            <motion.div
-                className="mx-auto w-full max-w-sm"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-            >
-                {/* Mobile Logo */}
-                <motion.div
-                    variants={itemVariants}
-                    className="mb-10 flex items-center gap-2 lg:hidden"
-                >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900">
-                        <HiCubeTransparent className="h-4 w-4 text-white" />
-                    </div>
-
-                    <span className="text-sm font-semibold tracking-tight">
-                        Code Runner
-                    </span>
-                </motion.div>
-
-                {/* Header */}
-                <motion.div variants={itemVariants} className="mb-8">
-                    <h1 className="text-2xl font-bold tracking-tight">
-                        Welcome back
-                    </h1>
-
-                    <p className="mt-1.5 text-sm text-muted-foreground">
-                        Sign in to your account to continue
-                    </p>
-                </motion.div>
-
-                {/* OAuth */}
-                <motion.div
-                    variants={itemVariants}
-                    className="mb-6 grid grid-cols-2 gap-3"
-                >
-                    <Button
-                        type="button"
-                        variant="outline"
-                        className="h-10 gap-2 text-sm font-normal"
-                    >
-                        <FcGoogle className="h-4 w-4 shrink-0" />
-                        Google
-                    </Button>
-
-                    <Button
-                        type="button"
-                        variant="outline"
-                        className="h-10 gap-2 text-sm font-normal"
-                    >
-                        <FaGithub className="h-4 w-4 shrink-0" />
-                        GitHub
-                    </Button>
-                </motion.div>
-
-                {/* Divider */}
-                <motion.div variants={itemVariants} className="relative mb-6">
-                    <Separator />
-
-                    <span className="absolute inset-0 flex items-center justify-center">
-                        <span className="bg-background px-2 text-xs text-muted-foreground">
-                            or continue with email
-                        </span>
-                    </span>
-                </motion.div>
-
-                {/* Form */}
-                <form
-                    onSubmit={handleSubmit(onSubmit)}
-                    className="space-y-4"
-                >
-                    {/* Email */}
-                    <motion.div
-                        variants={itemVariants}
-                        className="space-y-1.5"
-                    >
-                        <Label htmlFor="email">
-                            Email address
-                        </Label>
-
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="you@example.com"
-                            autoComplete="email"
-                            aria-invalid={!!errors.email}
-                            {...register('email')}
-                        />
-
-                        {errors.email && (
-                            <p className="text-xs text-destructive">
-                                {errors.email.message}
-                            </p>
-                        )}
-                    </motion.div>
-
-                    {/* Password */}
-                    <motion.div
-                        variants={itemVariants}
-                        className="space-y-1.5"
-                    >
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="password">
-                                Password
-                            </Label>
-
-                            <button
-                                type="button"
-                                className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-                            >
-                                Forgot password?
-                            </button>
-                        </div>
-
-                        <Input
-                            id="password"
-                            type="password"
-                            placeholder="••••••••"
-                            autoComplete="current-password"
-                            aria-invalid={!!errors.password}
-                            {...register('password')}
-                        />
-
-                        {errors.password && (
-                            <p className="text-xs text-destructive">
-                                {errors.password.message}
-                            </p>
-                        )}
-                    </motion.div>
-
-                    {/* Remember Me */}
-                    <motion.div
-                        variants={itemVariants}
-                        className="flex items-center gap-2"
-                    >
-                        <Controller
-                            name="rememberMe"
-                            control={control}
-                            render={({ field }) => (
-                                <Checkbox
-                                    id="rememberMe"
-                                    checked={field.value}
-                                    onCheckedChange={(checked) =>
-                                        field.onChange(Boolean(checked))
-                                    }
-                                />
-                            )}
-                        />
-
-                        <Label
-                            htmlFor="rememberMe"
-                            className="cursor-pointer text-sm font-normal text-muted-foreground"
-                        >
-                            Remember me for 30 days
-                        </Label>
-                    </motion.div>
-
-                    {/* Submit */}
-                    <motion.div variants={itemVariants}>
-                        <Button
-                            type="submit"
-                            className="w-full"
-                            disabled={isPending}
-                        >
-                            {isPending ? (
-                                <span className="flex items-center gap-2">
-                                    <ImSpinner2 className="h-4 w-4 animate-spin" />
-                                    Signing in...
-                                </span>
-                            ) : (
-                                'Sign in'
-                            )}
-                        </Button>
-                    </motion.div>
-                </form>
-
-                {/* Footer */}
-                <motion.p
-                    variants={itemVariants}
-                    className="mt-6 text-center text-sm text-muted-foreground"
-                >
+        <AuthFormLayout
+            title="Welcome back"
+            description="Sign in to your account to continue"
+            footer={
+                <p className="mt-6 text-center text-sm text-muted-foreground">
                     Don't have an account?{' '}
                     <Link
                         to={URLs.auth.register}
@@ -274,8 +87,118 @@ export default function Login() {
                     >
                         Create one
                     </Link>
-                </motion.p>
-            </motion.div>
-        </div>
+                </p>
+            }
+        >
+            {/* Form */}
+            <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="space-y-4"
+            >
+                {/* Email */}
+                <motion.div
+                    variants={itemVariants}
+                    className="space-y-1.5"
+                >
+                    <Label htmlFor="email">
+                        Email address
+                    </Label>
+
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        aria-invalid={!!errors.email}
+                        {...register('email')}
+                    />
+
+                    {errors.email && (
+                        <p className="text-xs text-destructive">
+                            {errors.email.message}
+                        </p>
+                    )}
+                </motion.div>
+
+                {/* Password */}
+                <motion.div
+                    variants={itemVariants}
+                    className="space-y-1.5"
+                >
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="password">
+                            Password
+                        </Label>
+
+                        <button
+                            type="button"
+                            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                        >
+                            Forgot password?
+                        </button>
+                    </div>
+
+                    <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        aria-invalid={!!errors.password}
+                        {...register('password')}
+                    />
+
+                    {errors.password && (
+                        <p className="text-xs text-destructive">
+                            {errors.password.message}
+                        </p>
+                    )}
+                </motion.div>
+
+                {/* Remember Me */}
+                <motion.div
+                    variants={itemVariants}
+                    className="flex items-center gap-2"
+                >
+                    <Controller
+                        name="rememberMe"
+                        control={control}
+                        render={({ field }) => (
+                            <Checkbox
+                                id="rememberMe"
+                                checked={field.value}
+                                onCheckedChange={(checked) =>
+                                    field.onChange(Boolean(checked))
+                                }
+                            />
+                        )}
+                    />
+
+                    <Label
+                        htmlFor="rememberMe"
+                        className="cursor-pointer text-sm font-normal text-muted-foreground"
+                    >
+                        Remember me for 30 days
+                    </Label>
+                </motion.div>
+
+                {/* Submit */}
+                <motion.div variants={itemVariants}>
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={isPending}
+                    >
+                        {isPending ? (
+                            <span className="flex items-center gap-2">
+                                <ImSpinner2 className="h-4 w-4 animate-spin" />
+                                Signing in...
+                            </span>
+                        ) : (
+                            'Sign in'
+                        )}
+                    </Button>
+                </motion.div>
+            </form>
+        </AuthFormLayout>
     );
 }

@@ -16,7 +16,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, STRATEGY_NAME.GIT
         });
     }
 
-    async validate(accessToken: string, refreshToken: string, profile: Profile) {
+    async validate(_accessToken: string, _refreshToken: string, profile: Profile) {
         const primaryEmail = profile.emails?.[0]?.value ?? `${profile.id}@github.noemail`;
         let user = await this.usersService.findByEmail(primaryEmail);
         if (!user) {

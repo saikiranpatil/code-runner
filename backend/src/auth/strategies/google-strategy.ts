@@ -16,7 +16,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, STRATEGY_NAME.GOO
         });
     }
 
-    async validate(accessToken: string, refreshToken: string, profile: Profile) {
+    async validate(_accessToken: string, _refreshToken: string, profile: Profile) {
         const emailObj = profile.emails?.[0];
 
         if (!emailObj || !emailObj.value) {

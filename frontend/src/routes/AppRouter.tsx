@@ -1,10 +1,10 @@
+import AuthFormLayout from "@/components/layout/AuthFormLayout";
 import Navbar from "@/components/layout/Navbar";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import PublicRoute from "@/components/layout/PublicRoute";
 import Login from "@/module/auth/components/Login";
 import Register from "@/module/auth/components/Register";
 import Problem from "@/module/problem/Problem";
-import AuthPage from "@/pages/AuthPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { URLs } from "@/shared/urls";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
@@ -25,10 +25,8 @@ const AppRouter = () => {
 
                 {/* Public routes */}
                 <Route element={<PublicRoute />}>
-                    <Route element={<AuthPage />}>
-                        <Route path={URLs.auth.login} element={<Login />} />
-                        <Route path={URLs.auth.register} element={<Register />} />
-                    </Route>
+                    <Route path={URLs.auth.login} element={<Login />} />
+                    <Route path={URLs.auth.register} element={<Register />} />
                 </Route>
 
                 {/* Protected routes */}

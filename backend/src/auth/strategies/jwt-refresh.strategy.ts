@@ -11,8 +11,9 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, STRATEGY_NAME
     constructor(private authService: AuthService) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
-                (req) => req?.cookies?.[COOKIE_NAME.REFRESH_TOKEN],
+                (req) => req?.cookies?.[COOKIE_NAME.REFRESH_TOKEN] ?? null,
             ]),
+            ignoreExpiration: false,
             secretOrKey: envConfig.jwtRefresh.secret,
             passReqToCallback: true,
         });
@@ -23,7 +24,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, STRATEGY_NAME
             throw new UnauthorizedException();
         }
 
-        const refreshToken = (req as any)?.cookies?.refreshToken;
+        const refreshToken = (req as any)?.cookies?.[COOKIE_NAME.REFRESH_TOKEN];
         if (!refreshToken) {
             throw new UnauthorizedException();
         }

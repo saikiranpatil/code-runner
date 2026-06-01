@@ -8,6 +8,7 @@ export const envConfig = Object.freeze({
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
     corsAllowedOrigins: parsed.CORS_ALLOWED_ORIGINS,
+    frontendUrl: parsed.FRONTEND_URL,
   },
 
   redis: {
