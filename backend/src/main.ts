@@ -42,7 +42,6 @@ async function bootstrap() {
   await app.listen(envConfig.app.port);
 
   logger.log(`Application started at ${envConfig.app.port}`);
-  logger.log(envConfig, 'envConfig');
 
   const shutdown = async () => {
     await app.close();

@@ -7,7 +7,7 @@ import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { GoogleAuthGuard } from './guards/google.guard';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { envConfig } from '../config';
-import { NODE_ENVS } from '../common/constants';
+import { COOKIE_NAME, NODE_ENVS } from '../common/constants';
 
 @Controller('auth')
 export class AuthController {
@@ -78,12 +78,12 @@ export class AuthController {
     }
 
     private setRefreshCookie(res: any, refreshToken: string) {
-        res.cookie('refresh_token', refreshToken, {
+        res.cookie(COOKIE_NAME.REFRESH_TOKEN, refreshToken, {
             httpOnly: true,
             secure: envConfig.app.nodeEnv === NODE_ENVS.PRODUCTION,
             sameSite: 'strict',
             path: '/auth/refresh',
-            maxAge: envConfig.jwtRefresh.expiryMs,
+            maxAge: envConfig.jwtRefresh.expiry,
         });
     }
 }

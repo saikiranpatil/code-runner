@@ -1,5 +1,15 @@
 import { z } from 'zod';
+import ms, { StringValue } from 'ms';
 import { NODE_ENVS } from '../common/constants';
+
+const timeSpanToMs = (val: string | number): number => {
+    if (typeof val === 'number') return val;
+    const parsed = ms(val as StringValue);
+    if (parsed === undefined) {
+        throw new Error(`Invalid time span: ${val}`);
+    }
+    return parsed;
+};
 
 export const envSchema = z.object({
     NODE_ENV: z.enum([NODE_ENVS.DEVELOPMENT, NODE_ENVS.PRODUCTION]).default(NODE_ENVS.DEVELOPMENT),
@@ -20,9 +30,9 @@ export const envSchema = z.object({
 
     // jwt
     JWT_SECRET: z.string(),
-    JWT_EXPIRY_MS: z.coerce.number().default(15 * 60 * 1000),
+    JWT_EXPIRY: z.union([z.string(), z.coerce.number()]).default("15m").transform(timeSpanToMs),
     JWT_REFRESH_SECRET: z.string(),
-    JWT_REFRESH_EXPIRY_MS: z.coerce.number().default(7 * 24 * 60 * 1000),
+    JWT_REFRESH_EXPIRY: z.union([z.string(), z.coerce.number()]).default("7d").transform(timeSpanToMs),
 
     // bcrypt
     BCRYPT_SALT_ROUNDS: z.coerce.number().default(10),

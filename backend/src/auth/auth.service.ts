@@ -79,11 +79,11 @@ export class AuthService {
             this.jwtService.sign(accessTokenPayload),
             this.jwtService.sign(refreshTokenPayload, {
                 secret: envConfig.jwtRefresh.secret,
-                expiresIn: envConfig.jwtRefresh.expiryMs,
+                expiresIn: envConfig.jwtRefresh.expiry,
             }),
         ]);
 
-        return { accessToken, refreshToken, expiresIn: envConfig.jwtRefresh.expiryMs };
+        return { accessToken, refreshToken, expiresIn: envConfig.jwtRefresh.expiry };
     }
 
     private async storeRefreshToken(userId: number, token: string) {

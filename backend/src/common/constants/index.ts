@@ -16,3 +16,7 @@ export const STRATEGY_NAME = {
   JWT: "JWT",
   JWT_REFRESH: "JWT_REFRESH",
 }
+
+export const COOKIE_NAME = {
+  REFRESH_TOKEN: "REFRESH_TOKEN"
+}

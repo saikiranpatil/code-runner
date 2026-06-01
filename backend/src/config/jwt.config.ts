@@ -5,6 +5,6 @@ export const jwtConfig: JwtModuleOptions = {
     global: true,
     secret: envConfig.jwt.secret,
     signOptions: {
-        expiresIn: envConfig.jwt.expiryMs
+        expiresIn: envConfig.jwt.expiry
     },
 }
