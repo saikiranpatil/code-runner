@@ -1,18 +1,20 @@
+import { useNavigate } from 'react-router-dom';
+import { useCallback } from 'react';
 import { motion, type Variants } from 'framer-motion';
+
 import { FaGithub } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import { HiCubeTransparent } from 'react-icons/hi2';
+import { useMutation } from '@tanstack/react-query';
+
+import { handleOAuthClick } from '@/module/auth/utils/oauth.utils';
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import SidePanel from '@/module/auth/components/SidePanel';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { mutate } from '@/utils/request/mutate';
-import { ENDPOINTS } from '@/api/endpoints';
-import { useNavigate } from 'react-router-dom';
-import { useCallback } from 'react';
+
 import { URLs } from '@/shared/urls';
-import { query } from '@/utils/request/query';
+import { useAuthStore } from '@/module/auth/auth.store';
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -51,18 +53,19 @@ export default function AuthFormLayout({
     footer,
 }: Props) {
     const navigate = useNavigate();
+    const login = useAuthStore((state) => state.handleLogin);
 
     const handleSocialLogin = useCallback(() => {
         navigate(URLs.problems.base);
     }, []);
 
     const { mutate: handleGoogleLogin, isPending: isGooglePending } = useMutation({
-        mutationFn: mutate(ENDPOINTS.AUTH.GOOGLE),
+        mutationFn: () => handleOAuthClick(login, "google"),
         onSuccess: handleSocialLogin
     });
 
     const { mutate: handleGithubLogin, isPending: isGithubPending } = useMutation({
-        mutationFn: mutate(ENDPOINTS.AUTH.GITHUB),
+        mutationFn: () => handleOAuthClick(login, "github"),
         onSuccess: handleSocialLogin
     });
 
@@ -111,7 +114,7 @@ export default function AuthFormLayout({
                                 type="button"
                                 variant="outline"
                                 className="h-10 gap-2"
-                                onClick={() => handleGoogleLogin({})}
+                                onClick={() => handleGoogleLogin()}
                                 loading={isGooglePending}
                             >
                                 <FcGoogle className="h-4 w-4" />
@@ -122,10 +125,7 @@ export default function AuthFormLayout({
                                 type="button"
                                 variant="outline"
                                 className="h-10 gap-2"
-                                onClick={() => {
-                                    window.location.href =
-                                        `${import.meta.env.VITE_API_URL}/auth/github`;
-                                }}
+                                onClick={() => handleGithubLogin()}
                                 loading={isGithubPending}
                             >
                                 <FaGithub className="h-4 w-4" />

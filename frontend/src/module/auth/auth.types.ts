@@ -10,3 +10,11 @@ export interface JwtPayload {
     exp: number;
     iat: number;
 }
+
+export type AuthProvider = 'github' | 'google';
+
+export interface OAuthResponse {
+    accessToken: string;
+    expiresIn: number;
+    user: User;
+}

@@ -60,11 +60,7 @@ export class AuthController {
     @UseGuards(GithubAuthGuard)
     async githubCallback(@Request() req, @Res({ passthrough: true }) res) {
         const user = req.user;
-        const authData = await this.login(res, user);
-
-        // Redirect to frontend callback page, passing the short-lived accessToken in the URL
-        const frontendUrl = `${envConfig.app.frontendUrl}/auth/callback?token=${authData.accessToken}&expiresIn=${authData.expiresIn}`;
-        return res.redirect(frontendUrl);
+        return await this.OAuthLogin(res, user);
     }
 
     @Public()
@@ -77,11 +73,30 @@ export class AuthController {
     @UseGuards(GoogleAuthGuard)
     async googleCallback(@Req() req, @Res({ passthrough: true }) res) {
         const user = req.user;
+        return await this.OAuthLogin(res, user);
+    }
+
+    private async OAuthLogin(res, user: User) {
         const authData = await this.login(res, user);
 
-        // Redirect to frontend callback page, passing the short-lived accessToken in the URL
-        const frontendUrl = `${envConfig.app.frontendUrl}/auth/callback?token=${authData.accessToken}&expiresIn=${authData.expiresIn}`;
-        return res.redirect(frontendUrl);
+        // Render an immediate raw script response back into the popup frame
+        res.setHeader('Content-Type', 'text/html');
+        return res.send(`
+        <script>
+            const payload = {
+                type: 'OAUTH_SUCCESS',
+                payload: ${JSON.stringify({
+            accessToken: authData.accessToken,
+            expiresIn: authData.expiresIn,
+            user: authData.user
+        })
+            }
+            };
+            
+            // Send the token payload securely directly to your frontend window origin
+            window.opener.postMessage(payload, "${envConfig.app.frontendUrl}");
+        </script>
+    `);
     }
 
     private async login(res: Response, user: User) {
