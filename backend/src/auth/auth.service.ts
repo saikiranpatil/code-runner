@@ -1,102 +1,119 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcrypt';
 import { User } from '../prisma/generated/client';
-import { envConfig } from '../config';
+import { jwtRefreshConfig } from '../config/jwt.config';
 import { JwtPayload, JwtRefreshPayload } from '../common/types';
 import { RegisterDto } from './dto/register.dto';
+import { BCRYPT_ROUNDS } from '../common/constants';
 
-type SafeUser = Omit<User, 'passwordHash' | 'refreshTokenHash'>;
+export type SafeUser = Omit<User, 'passwordHash' | 'refreshTokenHash'>;
+
 @Injectable()
 export class AuthService {
-    constructor(
-        private usersService: UsersService,
-        private jwtService: JwtService
-    ) { }
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) { }
 
-    async validateUser(email: string, password: string): Promise<any> {
-        const user = await this.usersService.findByEmail(email);
-        if (!user) {
-            return null;
-        }
-
-        const isMatch = await compare(password, user.passwordHash);
-        if (isMatch) {
-            const { passwordHash, ...result } = user;
-            return result;
-        }
-
-        return null;
+  async validateUser(email: string, password: string): Promise<SafeUser> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password.');
     }
 
-    async login(user: User) {
-        const res = await this.generateTokens(user.id, user.email);
-        await this.storeRefreshToken(user.id, res.refreshToken);
-        return res;
+    const isMatch = await compare(password, user.passwordHash);
+    if (!isMatch) {
+      throw new UnauthorizedException('Invalid email or password.');
     }
 
-    async register(registerDto: RegisterDto) {
-        const user = await this.usersService.create(registerDto);
-        return this.login(user);
+    const { passwordHash, refreshTokenHash, ...safe } = user;
+    return safe;
+  }
+
+
+  async login(user: User) {
+    const tokens = await this.generateTokens(user.id, user.email);
+    await this.storeRefreshToken(user.id, tokens.refreshToken);
+
+    const { passwordHash, refreshTokenHash, ...safe } = user;
+    return { user: safe, ...tokens };
+  }
+
+  async register(dto: RegisterDto) {
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) {
+      throw new ConflictException(
+        'An account with this email already exists.',
+      );
     }
 
-    async refresh(user: User) {
-        const tokens = await this.generateTokens(user.id, user.email);
-        await this.storeRefreshToken(user.id, tokens.refreshToken);
-        return tokens;
+    const user = await this.usersService.create(dto);
+    return this.login(user);
+  }
+
+  async refresh(user: User) {
+    const tokens = await this.generateTokens(user.id, user.email);
+    await this.storeRefreshToken(user.id, tokens.refreshToken);
+
+    const { passwordHash, refreshTokenHash, ...safe } = user;
+    return { user: safe, ...tokens };
+  }
+
+  async logout(userId: number) {
+    await this.usersService.update({
+      where: { id: userId },
+      data: { refreshTokenHash: null },
+    });
+  }
+
+  async validateRefreshToken(
+    userId: number,
+    rawToken: string,
+  ): Promise<SafeUser> {
+    const user = await this.usersService.findById(userId);
+    if (!user?.refreshTokenHash) {
+      throw new ForbiddenException('Refresh token is invalid or expired.');
     }
 
-    async logout(userId: number) {
-        await this.usersService.update({
-            where: { id: userId },
-            data: { refreshTokenHash: null },
-        });
+    const isValid = await compare(rawToken, user.refreshTokenHash);
+    if (!isValid) {
+      throw new ForbiddenException('Refresh token is invalid or expired.');
     }
 
-    async validateRefreshToken(userId: number, token: string): Promise<SafeUser> {
-        const user = await this.usersService.findById(userId);
-        if (!user || !user.refreshTokenHash) {
-            throw new ForbiddenException();
-        }
+    const { passwordHash, refreshTokenHash, ...safe } = user;
+    return safe;
+  }
 
-        const valid = await compare(token, user.refreshTokenHash);
-        if (!valid) {
-            throw new ForbiddenException();
-        }
+  private async generateTokens(userId: number, email: string) {
+    const accessPayload: JwtPayload = { sub: userId, email, type: 'access' };
+    const refreshPayload: JwtRefreshPayload = { sub: userId, type: 'refresh' };
 
-        const { passwordHash, refreshTokenHash, ...result } = user;
-        return result;
-    }
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(accessPayload),
+      this.jwtService.signAsync(refreshPayload, {
+        secret: jwtRefreshConfig.secret,
+        expiresIn: jwtRefreshConfig.signOptions.expiresIn,
+      }),
+    ]);
 
-    private async generateTokens(userId: number, email: string): Promise<{ accessToken: string, refreshToken: string, expiresIn: number }> {
-        const accessTokenPayload: JwtPayload = {
-            type: 'access',
-            sub: userId,
-            email,
-        };
+    const decoded = this.jwtService.decode(accessToken) as { exp: number };
+    const expiresIn = decoded.exp * 1000 - Date.now();
 
-        const refreshTokenPayload: JwtRefreshPayload = {
-            type: 'refresh',
-            sub: userId,
-        };
+    return { accessToken, refreshToken, expiresIn };
+  }
 
-        const [accessToken, refreshToken] = await Promise.all([
-            this.jwtService.sign(accessTokenPayload),
-            this.jwtService.sign(refreshTokenPayload, {
-                secret: envConfig.jwtRefresh.secret,
-                expiresIn: envConfig.jwtRefresh.expiry,
-            }),
-        ]);
-
-        return { accessToken, refreshToken, expiresIn: envConfig.jwtRefresh.expiry };
-    }
-
-    private async storeRefreshToken(userId: number, token: string) {
-        const hashedRefreshToken = await hash(token, envConfig.bcrypt.saltRounds);
-        await this.usersService.update({
-            where: { id: userId },
-            data: { refreshTokenHash: hashedRefreshToken },
-        });
-    }
+  private async storeRefreshToken(userId: number, rawToken: string) {
+    const refreshTokenHash = await hash(rawToken, BCRYPT_ROUNDS);
+    await this.usersService.update({
+      where: { id: userId },
+      data: { refreshTokenHash },
+    });
+  }
 }

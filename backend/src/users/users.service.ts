@@ -2,59 +2,63 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '../prisma/generated/client';
 import { hash } from 'bcrypt';
-import { envConfig } from '../config';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { randomBytes } from 'crypto';
+import { BCRYPT_ROUNDS } from '../common/constants';
 
 @Injectable()
 export class UsersService {
     constructor(private prisma: PrismaService) { }
 
     async findById(id: number): Promise<User | null> {
+        return this.prisma.user.findUnique({ where: { id } });
+    }
+
+    async findByEmail(email: string): Promise<User | null> {
         return this.prisma.user.findUnique({
-            where: { id: id },
+            where: { email: email.toLowerCase().trim() },
         });
     }
 
-    async findByEmail(
-        email: string
-    ): Promise<User | null> {
-        return this.prisma.user.findFirst({ where: { email: email } });
-    }
-
-    async create(registerDto: RegisterDto): Promise<User> {
-        const { name, email, password } = registerDto;
-        const passwordHash = await hash(password, envConfig.bcrypt.saltRounds);
-        return this.prisma.user.create({ data: { name, email, passwordHash } });
+    async create(dto: RegisterDto): Promise<User> {
+        const passwordHash = await hash(dto.password, BCRYPT_ROUNDS);
+        return this.prisma.user.create({
+            data: {
+                email: dto.email.toLowerCase().trim(),
+                name: dto.name,
+                passwordHash,
+            },
+        });
     }
 
     async update(params: {
         where: Prisma.UserWhereUniqueInput;
         data: Prisma.UserUpdateInput;
     }): Promise<User> {
-        const { where, data } = params;
-
-        // exclude password update
-        const { passwordHash, ...updateData } = data;
-
-        return this.prisma.user.update({
-            data: updateData,
-            where,
-        });
+        return this.prisma.user.update(params);
     }
 
     async delete(where: Prisma.UserWhereUniqueInput): Promise<User> {
-        return this.prisma.user.delete({
-            where,
-        });
+        return this.prisma.user.delete({ where });
     }
 
-    async createOAuthUser(data: { email: string; name: string }): Promise<User> {
-        const passwordHash = await hash(randomBytes(32).toString('hex'), 10);
+    /**
+     * Upsert an OAuth user by email. Creates with a random unusable password
+     * if the user doesn't exist yet.
+     */
+    async createOAuthUser(data: {
+        email: string;
+        name?: string;
+    }): Promise<User> {
+        const existing = await this.findByEmail(data.email);
+        if (existing) return existing;
+
+        // Random password, OAuth users log in via provider, not password
+        const passwordHash = await hash(randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
         return this.prisma.user.create({
             data: {
-                email: data.email,
-                name: data.name,
+                email: data.email.toLowerCase().trim(),
+                name: data.name ?? null,
                 passwordHash,
                 emailVerified: true,
             },

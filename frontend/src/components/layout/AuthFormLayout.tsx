@@ -56,7 +56,7 @@ export default function AuthFormLayout({
     const login = useAuthStore((state) => state.handleLogin);
 
     const handleSocialLogin = useCallback(() => {
-        navigate(URLs.problems.base);
+        navigate(URLs.problems);
     }, []);
 
     const { mutate: handleGoogleLogin, isPending: isGooglePending } = useMutation({

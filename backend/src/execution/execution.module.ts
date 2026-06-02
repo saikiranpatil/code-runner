@@ -11,7 +11,7 @@ import { ExecutorService } from './executor.service';
     LoggerModule.forRoot(loggerConfig),
     BullModule.forRoot(redisConfig),
     BullModule.registerQueue({
-      name: QUEUE_NAMES.EXECUTIONS,
+      name: QUEUE_NAMES.EXECUTION,
     }),
   ],
   providers: [ExecutorProcessor, ExecutorService],

@@ -1,32 +1,21 @@
-import api from "@/api/axios";
-import type { ApiRoute } from "./types";
-import { buildUrl } from "@/utils";
+import { callApi } from './query';
+import type { ApiRoute, ApiCallOptions } from './types';
 
-interface MutateOptions<TPathParams, TQueryParams> {
-  pathParams?: TPathParams;
-  queryParams?: TQueryParams;
-  silent?: boolean;
-}
-
-export function mutate<
-  TResponse,
-  TBody,
-  TPathParams extends Record<string, any> | void = void,
-  TQueryParams extends Record<string, any> | void = void,
->(
-  route: ApiRoute<TResponse, TBody, TPathParams, TQueryParams>,
-  options?: MutateOptions<TPathParams, TQueryParams>,
+/**
+ * Creates a TanStack Query compatible mutation function.
+ *
+ * Example:
+ * ```tsx
+ * const { mutate: createJob } = useMutation({
+ *   mutationFn: mutate(JobRoutes.createJob, { pathParams: { orgId } }),
+ * });
+ * ```
+ */
+export default function mutate<Route extends ApiRoute<unknown, unknown>>(
+  route: Route,
+  options?: ApiCallOptions<Route>,
 ) {
-  return async (body: TBody): Promise<TResponse> => {
-    const url = buildUrl(route.path, options?.pathParams, options?.queryParams);
-
-    const res = await api.request<TResponse>({
-      url,
-      method: route.method,
-      headers: { "Content-Type": "application/json" },
-      data: body,
-    });
-
-    return res.data;
+  return (variables: Route["TBody"]) => {
+    return callApi(route, { ...options, body: variables });
   };
 }

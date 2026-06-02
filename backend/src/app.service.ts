@@ -8,7 +8,7 @@ import { Logger } from 'nestjs-pino';
 @Injectable()
 export class AppService {
   constructor(
-    @InjectQueue(QUEUE_NAMES.EXECUTIONS)
+    @InjectQueue(QUEUE_NAMES.EXECUTION)
     private readonly queue: Queue,
     private readonly logger: Logger,
   ) { }

@@ -1,82 +1,132 @@
-import { Injectable } from "@nestjs/common";
-import { envConfig, LANGUAGES } from "../config";
-import { randomUUID } from "crypto";
-import { spawn } from "child_process";
+import { Injectable, Logger } from '@nestjs/common';
+import { envConfig, LANGUAGES } from '../config';
+import { randomUUID } from 'crypto';
+import { spawn } from 'child_process';
+
+export interface ExecutionResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  timedOut: boolean;
+  oomKilled: boolean;
+  outputLimitHit: boolean;
+}
 
 @Injectable()
 export class ExecutorService {
-    constructor() { }
+  private readonly logger = new Logger(ExecutorService.name);
 
-    execute(code, language) {
-        return new Promise((resolve) => {
-            const lang = LANGUAGES[language];
+  execute(code: string, language: string): Promise<ExecutionResult> {
+    return new Promise((resolve, reject) => {
+      const langConfig = LANGUAGES[language];
+      if (!langConfig) {
+        return reject(new Error(`Unsupported language: ${language}`));
+      }
 
-            if (!lang) {
-                return resolve({ stdout: '', stderr: `Unsupported language: ${language}`, exitCode: 1, timedOut: false });
-            }
+      const containerName = `runner-${randomUUID()}`;
+      const timeout = envConfig.worker.executionTimeout;
+      const maxBytes = envConfig.worker.maxOutputBytes;
 
-            const containerName = `runner-${randomUUID()}`;  // unique per execution
+      const args = [
+        'run',
+        '--rm',
+        '--name', containerName,
+        '--network', 'none',
+        '--memory', '128m',
+        '--memory-swap', '128m',
+        '--cpus', '0.5',
+        '--read-only',
+        '--cap-drop', 'ALL',
+        '--security-opt', 'no-new-privileges',
+        langConfig.image,
+        ...langConfig.cmd,
+      ];
 
-            const child = spawn('docker', [
-                'run', '--rm',
-                '-i',
-                '--name', containerName,   // ← named container
-                '--network', 'none',
-                '--memory', '50m',
-                '--cpus', '0.5',
-                lang.image,
-                ...lang.cmd
-            ]);
+      const child = spawn('docker', args);
 
-            let stdout = '';
-            let stderr = '';
-            let outputBytes = 0;
-            let outputLimitHit = false;
+      let stdout = '';
+      let stderr = '';
+      let timedOut = false;
+      let oomKilled = false;
+      let outputLimitHit = false;
+      let settled = false;
 
-            function killContainer() {
-                // Kill both the host process AND the container
-                child.kill('SIGKILL');
-                spawn('docker', ['kill', containerName]);  // ensure container dies
-            }
+      // Kill the container on the host (not just the spawned process)
+      const killContainer = () => {
+        try {
+          spawn('docker', ['kill', containerName], { stdio: 'ignore' });
+        } catch {
+          // best-effort; container may have already exited
+        }
+      };
 
-            function handleChunk(target, chunk) {
-                outputBytes += chunk.length;
-                if (outputBytes > envConfig.worker.maxOutputBytes) {
-                    outputLimitHit = true;
-                    killContainer();
-                    return;
-                }
-                if (target === 'stdout') stdout += chunk.toString();
-                else stderr += chunk.toString();
-            }
+      // Timeout
+      const timer = setTimeout(() => {
+        timedOut = true;
+        killContainer();
+        child.kill('SIGKILL');
+      }, timeout);
 
-            child.stdout.on('data', (chunk) => handleChunk('stdout', chunk));
-            child.stderr.on('data', (chunk) => handleChunk('stderr', chunk));
+      // stdout / stderr collection with output cap
+      const handleChunk = (
+        target: 'stdout' | 'stderr',
+        chunk: Buffer,
+      ) => {
+        const current = target === 'stdout' ? stdout : stderr;
+        const text = chunk.toString('utf8');
+        
+        const remaining = maxBytes - current.length;
+        if (remaining <= 0) {
+          outputLimitHit = true;
+          return;
+        }
+        
+        const trimmed = text.slice(0, remaining);
+        if (target === 'stdout') stdout += trimmed;
+        else stderr += trimmed;
 
-            const timer = setTimeout(() => {
-                killContainer();
-                resolve({ stdout, stderr, exitCode: null, timedOut: true, oomKilled: false, outputLimitHit: false });
-            }, envConfig.worker.executionTimeout);
+        if (stdout.length + stderr.length >= maxBytes) {
+          outputLimitHit = true;
+          killContainer();
+          child.kill('SIGKILL');
+        }
+      };
 
-            child.on('close', (exitCode) => {
-                clearTimeout(timer);
-                resolve({
-                    stdout,
-                    stderr,
-                    exitCode,
-                    timedOut: false,
-                    oomKilled: exitCode === 137,
-                    outputLimitHit
-                });
-            });
+      child.stdout.on('data', (chunk: Buffer) => handleChunk('stdout', chunk));
+      child.stderr.on('data', (chunk: Buffer) => handleChunk('stderr', chunk));
 
-            child.on('error', (err) => {
-                clearTimeout(timer);
-                resolve({ stdout: '', stderr: err.message, exitCode: null, timedOut: false, oomKilled: false, outputLimitHit: false });
-            });
+      // Write code to container stdin
+      if (code) {
+        child.stdin.write(code);
+        child.stdin.end();
+      }
 
-            child.stdin.write(code);
-            child.stdin.end();
-        });
-    }
+      // Process exit
+      child.on('close', (exitCode, signal) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        
+        // Always attempt cleanup even on normal exit
+        killContainer();
+
+        // Docker OOM killer uses exit code 137 (SIGKILL)
+        if (exitCode === 137 && !timedOut) oomKilled = true;
+
+        resolve({ stdout, stderr, exitCode, timedOut, oomKilled, outputLimitHit });
+      });
+
+      child.on('error', (err) => {
+        if (settled) return;
+        
+        settled = true;
+        clearTimeout(timer);
+        killContainer();
+        
+        this.logger.error(`Executor spawn error: ${err.message}`, err.stack);
+        
+        reject(err);
+      });
+    });
+  }
 }

@@ -10,10 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { URLs } from '@/shared/urls';
-import { ENDPOINTS } from '@/api/endpoints';
-import { mutate } from '@/utils/request/mutate';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
 
 import {
     loginSchema,
@@ -22,6 +20,9 @@ import {
 import { useAuthStore } from '../auth.store';
 import type { LoginResponse } from '../auth.dto';
 import AuthFormLayout from '@/components/layout/AuthFormLayout';
+import authApi from '@/types/auth/authApi';
+import mutate from '@/utils/request/mutate';
+import query from '@/utils/request/query';
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },
@@ -53,14 +54,20 @@ export default function Login() {
     });
 
     const { mutate: handleLogin, isPending } = useMutation({
-        mutationFn: mutate(ENDPOINTS.AUTH.LOGIN),
-        onSuccess: (data: LoginResponse) => {
+        mutationFn: mutate(authApi.auth.login),
+        onSuccess: (data) => {
             login(data.user, data.accessToken, data.expiresIn);
-            navigate(URLs.home.base);
+            navigate(URLs.home);
         },
     });
+    const { data } = useQuery({
+        queryFn: query(authApi.auth.login),
+        queryKey: ["SD"]
+    });
 
-    const onSubmit = (values: LoginFormValues) => {
+    console.log(data);
+
+    const onSubmit = (values) => {
         handleLogin(values);
     };
 

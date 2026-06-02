@@ -14,7 +14,7 @@ import AuthGuardProvider from './auth/auth.provider';
 @Module({
   imports: [
     LoggerModule.forRoot(loggerConfig),
-    BullModule.registerQueue({ name: QUEUE_NAMES.EXECUTIONS }),
+    BullModule.registerQueue({ name: QUEUE_NAMES.EXECUTION }),
     ShutdownModule,
     PrismaModule,
     AuthModule,

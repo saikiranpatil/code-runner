@@ -1,29 +1,55 @@
-import api from "@/api/axios";
-import { buildUrl } from "..";
-import type { ApiRoute } from "./types";
+import api from '@/api/axios';
+import { buildUrl } from '@/utils';
+import { HTTPError, type ApiRoute, type ApiCallOptions } from './types';
 
-interface QueryOptions<TPathParams, TQueryParams> {
-  pathParams?: TPathParams;
-  queryParams?: TQueryParams;
-  silent?: boolean;
-}
+export async function callApi<Route extends ApiRoute<unknown, unknown>>(
+  route: Route,
+  options?: ApiCallOptions<Route>,
+): Promise<Route["TRes"]> {
+  const url = buildUrl(
+    route.path,
+    options?.pathParams as Record<string, any> | undefined,
+    options?.queryParams as Record<string, any> | undefined,
+  );
 
-export function query<
-  TResponse,
-  TPathParams extends Record<string, any> | void = void,
-  TQueryParams extends Record<string, any> | void = void,
->(
-  route: ApiRoute<TResponse, void, TPathParams, TQueryParams>,
-  options?: QueryOptions<TPathParams, TQueryParams>,
-) {
-  return async (): Promise<TResponse> => {
-    const url = buildUrl(route.path, options?.pathParams, options?.queryParams);
-    
-    // Axios automatically handles GET requests and parses JSON responses
-    const res = await api.get<TResponse>(url, {
-      headers: { "Content-Type": "application/json" }
+  try {
+    const response = await api.request<Route["TRes"]>({
+      method: route.method,
+      url,
+      data: options?.body,
+      signal: options?.signal,
     });
 
-    return res.data;
+    return response.data;
+  } catch (error: any) {
+    const isSilent =
+      typeof options?.silent === 'boolean' ? options.silent : false;
+
+    throw new HTTPError({
+      message: error.message ?? 'Request Failed',
+      status: error.response?.status ?? 0,
+      silent: isSilent,
+      cause: error.response?.data,
+    });
+  }
+}
+
+/**
+ * Creates a TanStack Query compatible query function.
+ *
+ * Example:
+ * ```tsx
+ * const { data } = useQuery({
+ *   queryKey: ['job', jobId],
+ *   queryFn: query(JobRoutes.getJob, { pathParams: { jobId } }),
+ * });
+ * ```
+ */
+export default function query<Route extends ApiRoute<unknown, unknown>>(
+  route: Route,
+  options?: ApiCallOptions<Route>,
+) {
+  return ({ signal }: { signal: AbortSignal }) => {
+    return callApi(route, { ...options, signal });
   };
 }

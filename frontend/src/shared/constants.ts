@@ -17,4 +17,6 @@ export const LANGUAGES = [
     { label: 'C', value: 'c' },
 ]
 
+export type Language = (typeof LANGUAGES)[number]['value'];
+
 export const ACCESS_TOKEN_KEY = "access_token";

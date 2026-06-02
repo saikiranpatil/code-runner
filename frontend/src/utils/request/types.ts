@@ -1,15 +1,82 @@
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export type QueryParamValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | Array<string | number | boolean | null | undefined>;
 
-export interface ApiRoute<
-  TResponse = unknown,
-  TBody = void,
-  TPathParams = void,
-  TQueryParams = void,
-> {
+export type QueryParams = Record<string, QueryParamValue>;
+
+type ExtractRouteParams<T extends string> =
+  T extends `${infer _Start}:${infer Param}/${infer Rest}`
+  ? Param | ExtractRouteParams<Rest>
+  : T extends `${infer _Start}:${infer Param}`
+  ? Param
+  : never;
+
+export type PathParams<T extends string> = {
+  [K in ExtractRouteParams<T>]: string;
+};
+
+export interface ApiRoute<TData, TBody = unknown> {
   path: string;
-  method: HttpMethod;
-  _response?: TResponse;
-  _body?: TBody;
-  _pathParams?: TPathParams;
-  _queryParams?: TQueryParams;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  TRes: TData;
+  TBody?: TBody;
+  noAuth?: boolean;
+  defaultQueryParams?: QueryParams;
 }
+
+export interface ApiCallOptions<Route extends ApiRoute<unknown, unknown>> {
+  pathParams?: PathParams<Route["path"]>;
+  queryParams?: QueryParams;
+  body?: Route["TBody"];
+  silent?: boolean | ((response: Response) => boolean);
+  signal?: AbortSignal;
+}
+
+export class HTTPError extends Error {
+  status: number;
+  silent: boolean;
+  cause?: Record<string, unknown>;
+
+  constructor({
+    message,
+    status,
+    silent,
+    cause,
+  }: {
+    message: string;
+    status: number;
+    silent: boolean;
+    cause?: Record<string, unknown>;
+  }) {
+    super(message, { cause });
+    this.status = status;
+    this.silent = silent;
+    this.cause = cause;
+  }
+}
+
+export interface ApiResponseEnvelope<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+/**
+ * A fake function that returns an empty object casted to type T
+ * @returns Empty object as type T
+ */
+export function Type<T>(): T {
+  return {} as T;
+}
+
+export const HttpMethod = {
+  GET: 'GET',
+  POST: 'POST',
+  PUT: 'PUT',
+  DELETE: 'DELETE',
+  PATCH: 'PATCH'
+};

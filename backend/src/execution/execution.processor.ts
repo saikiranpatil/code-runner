@@ -11,7 +11,7 @@ import { ExecutionDto } from './dto/execution.dto';
 import { Logger } from 'nestjs-pino';
 import { ExecutorService } from './executor.service';
 
-@Processor(QUEUE_NAMES.EXECUTIONS, { concurrency: envConfig.worker.concurrency })
+@Processor(QUEUE_NAMES.EXECUTION, { concurrency: envConfig.worker.concurrency })
 export class ExecutorProcessor extends WorkerHost {
     constructor(
         private readonly logger: Logger,

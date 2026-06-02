@@ -1,47 +1,54 @@
-import type { ApiErrorResponse } from "@/api/types";
-import type { AxiosError } from "axios";
+import type { ApiErrorResponse } from '@/api/types';
+import type { AxiosError } from 'axios';
 
 export interface ParsedError {
   message: string;
   errors: string[];
   statusCode: number;
-};
+}
 
+const isAxiosError = (error: unknown): error is AxiosError =>
+  typeof error === 'object' &&
+  error !== null &&
+  (error as any).isAxiosError === true;
+
+/**
+ * Converts any thrown value into a consistent ParsedError.
+ *
+ * - AxiosError with a shaped backend response → uses the backend message/errors
+ * - AxiosError without a body → uses the HTTP status text
+ * - Unknown Error → re-throws so the ErrorBoundary can catch it
+ * - Anything else → returns a generic ParsedError
+ */
 export const parseApiError = (error: unknown): ParsedError => {
-  // Axios error with a response from the server
-  if (isAxiosError(error) && error.response) {
-    const data = error.response.data as ApiErrorResponse;
+  if (isAxiosError(error)) {
+    const statusCode = error.response?.status ?? 0;
+    const data = error.response?.data as ApiErrorResponse | undefined;
 
-    return {
-      message: data.message ?? "Something went wrong.",
-      errors: data.errors ?? [],
-      statusCode: error.response.status,
-    };
-  }
+    if (data && typeof data === 'object') {
+      return {
+        message: data.message || error.message || 'Something went wrong.',
+        errors: Array.isArray(data.errors) ? data.errors : [],
+        statusCode,
+      };
+    }
 
-  // Axios error with no response (network down, timeout, etc.)
-  if (isAxiosError(error) && !error.response) {
+    // Network error or no body
     return {
-      message: "Network error. Please check your connection.",
+      message: error.message || 'Network error. Please check your connection.',
       errors: [],
-      statusCode: 0,
+      statusCode,
     };
   }
 
-  // Unknown/unexpected error
-  return {
-    message:
-      error instanceof Error ? error.message : "An unexpected error occurred.",
-    errors: [],
-    statusCode: 500,
-  };
-};
+  // Real programming error, let the ErrorBoundary handle it
+  if (error instanceof Error) {
+    throw error;
+  }
 
-const isAxiosError = (error: unknown): error is AxiosError => {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "isAxiosError" in error &&
-    (error as AxiosError).isAxiosError === true
-  );
+  return {
+    message: 'An unexpected error occurred.',
+    errors: [],
+    statusCode: 0,
+  };
 };

@@ -1,112 +1,96 @@
-import { ENDPOINTS } from "@/api/endpoints";
-import type { User } from "@/module/user/user.types";
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
-import type { RefreshResponse } from "@/module/auth/auth.dto";
+import type { User } from '@/module/user/user.types';
+import authApi from '@/types/auth/authApi';
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
-type AuthStatus = "idle" | "loading" | "authenticated" | "unauthenticated";
+type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
 
 interface AuthState {
-    user: User | null;
-    token: string | null;
-    status: AuthStatus;
-    isAuthenticated: boolean;
+  user: User | null;
+  token: string | null;
+  status: AuthStatus;
+  isAuthenticated: boolean;
+  _refreshTimer: ReturnType<typeof setTimeout> | null;
 
-    init: () => Promise<void>;
-    handleLogin: (user: User, token: string, expiresIn: number) => void;
-    handleLogout: () => void;
-    getUser: () => User | null;
-    getToken: () => string | null;
-    getIsAuthenticated: () => boolean;
-    getStatus: () => AuthStatus;
+  init: () => Promise<void>;
+  handleLogin: (user: User, token: string, expiresIn: number) => void;
+  handleLogout: () => void;
+  getUser: () => User | null;
+  getToken: () => string | null;
+  getIsAuthenticated: () => boolean;
+  getStatus: () => AuthStatus;
 }
 
-let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+const REFRESH_BUFFER_MS = 60_000;
 
-export const scheduleTokenRefresh = (
-    expiresIn: number,
-    doRefresh: () => Promise<void>,
-): void => {
-    if (refreshTimer) clearTimeout(refreshTimer);
-
-    const delay = Math.max(expiresIn - 60_000, 0);
-
-    refreshTimer = setTimeout(async () => {
-        try {
-            await doRefresh();
-        } catch {
-            // Interceptor in api.ts handles calling handleLogout on failure
-        }
-    }, delay);
-};
-
-export const cancelTokenRefresh = (): void => {
-    if (refreshTimer) {
-        clearTimeout(refreshTimer);
-        refreshTimer = null;
-    }
+const doRefresh = async () => {
+  try {
+    // Lazy import to avoid circular dependency with axios
+    const { default: api } = await import('@/api/axios');
+    const res = await api.post(authApi.auth.refresh.path);
+    const { user, accessToken, expiresIn } = res.data;
+    useAuthStore.getState().handleLogin(user, accessToken, expiresIn);
+  } catch {
+    useAuthStore.getState().handleLogout();
+  }
 };
 
 export const useAuthStore = create<AuthState>()(
-    devtools(
-        (set, get) => ({
-            user: null,
-            token: null,
-            status: "idle",
-            isAuthenticated: false,
+  devtools(
+    (set, get) => ({
+      user: null,
+      token: null,
+      status: 'idle',
+      isAuthenticated: false,
+      _refreshTimer: null,
 
-            async init() {
-                set({ status: "loading" });
-                try {
-                    // Dynamic import keeps api.ts out of this module's
-                    // static dependency graph, preventing a circular ref.
-                    const { default: api } = await import("@/api/axios");
-                    const { data } = await api.post<RefreshResponse>(
-                        ENDPOINTS.AUTH.REFRESH.path,
-                    );
+      async init() {
+        set({ status: 'loading' });
+        try {
+          const { default: api } = await import('@/api/axios');
+          const res = await api.post(authApi.auth.refresh.path);
+          const { user, accessToken, expiresIn } = res.data;
+          get().handleLogin(user, accessToken, expiresIn);
+        } catch {
+          set({ status: 'unauthenticated', user: null, token: null, isAuthenticated: false });
+        }
+      },
 
-                    set({
-                        user: data.user,
-                        token: data.accessToken,
-                        isAuthenticated: true,
-                        status: "authenticated",
-                    });
+      handleLogin(user, token, expiresIn) {
+        const existing = get()._refreshTimer;
+        if (existing) clearTimeout(existing);
 
-                    scheduleTokenRefresh(data.expiresIn, () =>
-                        api.post(ENDPOINTS.AUTH.REFRESH.path),
-                    );
-                } catch {
-                    set({ status: "unauthenticated" });
-                }
-            },
+        const delay = Math.max(expiresIn - REFRESH_BUFFER_MS, 0);
+        const timer = setTimeout(doRefresh, delay);
 
-            handleLogin(user, token, expiresIn) {
-                set({ user, token, isAuthenticated: true, status: "authenticated" });
+        set({
+          user,
+          token,
+          status: 'authenticated',
+          isAuthenticated: true,
+          _refreshTimer: timer,
+        });
+      },
 
-                import("@/api/axios").then(({ default: api }) => {
-                    scheduleTokenRefresh(expiresIn, () =>
-                        api.post(ENDPOINTS.AUTH.REFRESH.path),
-                    );
-                });
-            },
+      handleLogout() {
+        const timer = get()._refreshTimer;
+        if (timer) clearTimeout(timer);
+        set({
+          user: null,
+          token: null,
+          status: 'unauthenticated',
+          isAuthenticated: false,
+          _refreshTimer: null,
+        });
+      },
 
-            handleLogout() {
-                cancelTokenRefresh();
-                set({
-                    user: null,
-                    token: null,
-                    isAuthenticated: false,
-                    status: "unauthenticated",
-                });
-            },
-
-            getToken: () => get().token,
-            getUser: () => get().user,
-            getStatus: () => get().status,
-            getIsAuthenticated: () => get().isAuthenticated,
-        }),
-        { name: "AuthStore" },
-    ),
+      getUser: () => get().user,
+      getToken: () => get().token,
+      getIsAuthenticated: () => get().isAuthenticated,
+      getStatus: () => get().status,
+    }),
+    { name: 'auth-store' },
+  ),
 );
 
 export const selectUser = (s: AuthState) => s.user;

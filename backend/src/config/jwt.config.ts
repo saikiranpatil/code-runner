@@ -1,10 +1,16 @@
-import { JwtModuleOptions } from "@nestjs/jwt";
-import { envConfig } from "./env.config";
+import { JwtModuleOptions } from '@nestjs/jwt';
+import { envConfig } from './env.config';
 
 export const jwtConfig: JwtModuleOptions = {
-    global: true,
     secret: envConfig.jwt.secret,
     signOptions: {
-        expiresIn: envConfig.jwt.expiry
+        expiresIn: envConfig.jwt.expiry,
     },
-}
+};
+
+export const jwtRefreshConfig = {
+    secret: envConfig.jwtRefresh.secret,
+    signOptions: {
+        expiresIn: envConfig.jwtRefresh.expiry,
+    }
+};

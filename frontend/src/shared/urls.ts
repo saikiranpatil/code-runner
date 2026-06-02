@@ -1,13 +1,10 @@
 export const URLs = {
-    home: {
-        base: '/home',
-    },
-    auth: {
-        login: '/auth/login',
-        register: '/auth/register',
-    },
-    problems: {
-        base: '/problems',
-        problem: ':id',
-    },
+  home: '/',
+  login: '/login',
+  register: '/register',
+  problems: '/problems',
+  oauthCallback: '/oauth/callback',
+  notFound: '*',
 } as const;
+
+export type AppUrl = (typeof URLs)[keyof typeof URLs];

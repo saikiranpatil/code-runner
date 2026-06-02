@@ -28,12 +28,12 @@ export const envConfig = Object.freeze({
 
   jwt: {
     secret: parsed.JWT_SECRET,
-    expiry: parsed.JWT_EXPIRY,
+    expiry: parsed.JWT_EXPIRATION,
   },
 
   jwtRefresh: {
     secret: parsed.JWT_REFRESH_SECRET,
-    expiry: parsed.JWT_REFRESH_EXPIRY,
+    expiry: parsed.JWT_REFRESH_EXPIRATION,
   },
 
   bcrypt: {

@@ -1,11 +1,22 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Request, Res, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Post,
+    Req,
+    Request,
+    Res,
+    UseGuards,
+} from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from './auth.decorators';
 import { LocalAuthGuard } from './guards/local.guard';
 import { GithubAuthGuard } from './guards/github.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { GoogleAuthGuard } from './guards/google.guard';
-import { JwtAuthGuard } from './guards/jwt.guard';
 import { envConfig } from '../config';
 import { COOKIE_NAME, NODE_ENVS } from '../common/constants';
 import { User } from '../prisma/generated/client';
@@ -15,105 +26,109 @@ import { RegisterDto } from './dto/register.dto';
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
+    // Local login
     @Public()
+    @UseGuards(LocalAuthGuard)
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    @UseGuards(LocalAuthGuard)
-    async localLogin(@Req() req, @Res({ passthrough: true }) res) {
-        const user = req.user;
-        return await this.login(res, user);
+    async localLogin(@Req() req: any, @Res({ passthrough: true }) res) {
+        const result = await this.authService.login(req.user as User);
+        this.setRefreshCookie(res, result.refreshToken);
+        // Strip the raw token — only the httpOnly cookie carries it
+        const { refreshToken, ...payload } = result;
+        return payload;
     }
 
+    // Register
+    @Public()
+    @Post('register')
+    @HttpCode(HttpStatus.CREATED)
+    async register(
+        @Body() registerDto: RegisterDto,
+        @Res({ passthrough: true }) res,
+    ) {
+        const result = await this.authService.register(registerDto);
+        this.setRefreshCookie(res, result.refreshToken);
+        const { refreshToken, ...payload } = result;
+        return payload;
+    }
+
+    // Logout
     @Post('logout')
     @HttpCode(HttpStatus.OK)
-    @UseGuards(JwtAuthGuard)
-    async logout(@Request() req, @Res({ passthrough: true }) res) {
+    async logout(
+        @Request() req: any,
+        @Res({ passthrough: true }) res,
+    ) {
         await this.authService.logout(req.user.id);
-        res.clearCookie('refresh_token', {
-            path: '/auth/refresh',
-        });
-
-        return { message: 'Logged out successfully' };
+        res.clearCookie(COOKIE_NAME.REFRESH_TOKEN);
+        return { message: 'Logged out successfully.' };
     }
 
+    // Refresh
     @Public()
+    @UseGuards(JwtRefreshGuard)
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
-    @UseGuards(JwtRefreshGuard)
-    async refresh(@Request() req) {
-        return await this.authService.refresh(req.user);
+    async refresh(
+        @Request() req: any,
+        @Res({ passthrough: true }) res,
+    ) {
+        const result = await this.authService.refresh(req.user as User);
+        this.setRefreshCookie(res, result.refreshToken);
+        const { refreshToken, ...payload } = result;
+        return payload;
     }
 
-    @HttpCode(HttpStatus.OK)
-    @Post('register')
+    // GitHub OAuth
     @Public()
-    register(@Body() registerDto: RegisterDto) {
-        return this.authService.register(registerDto);
-    }
-
-    @Public()
+    @UseGuards(GithubAuthGuard)
     @Get('github')
-    @UseGuards(GithubAuthGuard)
-    async loginWithGithub() { }
+    async loginWithGithub() {
+        // Passport redirects — nothing to do here
+    }
 
     @Public()
+    @UseGuards(GithubAuthGuard)
     @Get('github/callback')
-    @UseGuards(GithubAuthGuard)
-    async githubCallback(@Request() req, @Res({ passthrough: true }) res) {
-        const user = req.user;
-        return await this.OAuthLogin(res, user);
+    async githubCallback(@Request() req: any, @Res() res) {
+        await this.oAuthLogin(res, req.user as User);
     }
 
+    // Google OAuth
     @Public()
+    @UseGuards(GoogleAuthGuard)
     @Get('google')
-    @UseGuards(GoogleAuthGuard)
-    async loginWithGoogle() { }
+    async loginWithGoogle() {
+        // Passport redirects — nothing to do here
+    }
 
     @Public()
-    @Get('google/callback')
     @UseGuards(GoogleAuthGuard)
-    async googleCallback(@Req() req, @Res({ passthrough: true }) res) {
-        const user = req.user;
-        return await this.OAuthLogin(res, user);
+    @Get('google/callback')
+    async googleCallback(@Req() req: any, @Res() res) {
+        await this.oAuthLogin(res, req.user as User);
     }
 
-    private async OAuthLogin(res, user: User) {
-        const authData = await this.login(res, user);
+    private async oAuthLogin(res: Response, user: User) {
+        const result = await this.authService.login(user);
+        this.setRefreshCookie(res, result.refreshToken);
 
-        // Render an immediate raw script response back into the popup frame
-        res.setHeader('Content-Type', 'text/html');
-        return res.send(`
-        <script>
-            const payload = {
-                type: 'OAUTH_SUCCESS',
-                payload: ${JSON.stringify({
-            accessToken: authData.accessToken,
-            expiresIn: authData.expiresIn,
-            user: authData.user
-        })
-            }
-            };
-            
-            // Send the token payload securely directly to your frontend window origin
-            window.opener.postMessage(payload, "${envConfig.app.frontendUrl}");
-        </script>
-    `);
+        // Send token to the popup window and close it
+        const { refreshToken, ...payload } = result;
+        const encoded = encodeURIComponent(JSON.stringify(payload));
+        res.redirect(
+            `${envConfig.app.frontendUrl}/oauth/callback?data=${encoded}`,
+        );
     }
 
-    private async login(res: Response, user: User) {
-        const { accessToken, refreshToken, expiresIn } = await this.authService.login(user);
-
-        this.setRefreshCookie(res, refreshToken);
-        return { user, accessToken, expiresIn };
-    }
-
-    private setRefreshCookie(res: any, refreshToken: string) {
+    private setRefreshCookie(res: Response, refreshToken: string) {
         res.cookie(COOKIE_NAME.REFRESH_TOKEN, refreshToken, {
             httpOnly: true,
             secure: envConfig.app.nodeEnv === NODE_ENVS.PRODUCTION,
-            sameSite: 'strict',
-            path: '/auth/refresh',
+            sameSite: 'lax',
             maxAge: envConfig.jwtRefresh.expiry,
+            path: '/auth/refresh',
         });
     }
 }

@@ -1,54 +1,57 @@
-import type { AuthProvider, OAuthResponse } from "../auth.types";
+import type { AuthProvider, OAuthResponse } from '../auth.types';
 
 export const handleOAuthClick = (
-    login: (user: any, token: string, expires: number) => void,
-    provider: AuthProvider,
+  login: (user: any, token: string, expiresIn: number) => void,
+  provider: AuthProvider,
 ): Promise<OAuthResponse> => {
-    return new Promise((resolve, reject) => {
-        const width = 500;
-        const height = 600;
-        const left = window.screen.width / 2 - width / 2;
-        const top = window.screen.height / 2 - height / 2;
+  return new Promise((resolve, reject) => {
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
 
-        const popup = window.open(
-            `${import.meta.env.VITE_API_BASE_URL}/auth/${provider}`,
-            'oauth-popup',
-            `width=${width},height=${height},top=${top},left=${left}`
-        );
+    const popup = window.open(
+      `/auth/${provider}`,
+      `${provider}-oauth`,
+      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`,
+    );
 
-        const timer = setInterval(() => {
-            if (popup?.closed) {
-                clearInterval(timer);
-                window.removeEventListener('message', handleMessage);
-                reject(new Error('Popup closed by user'));
-            }
-        }, 500);
+    if (!popup) {
+      return reject(new Error('Popup was blocked. Please allow popups for this site.'));
+    }
 
-        const handleMessage = (event: MessageEvent) => {
-            if (event.origin !== import.meta.env.VITE_API_BASE_URL) return;
-            if (event.data?.type !== 'OAUTH_SUCCESS') return;
+    const handleMessage = (event: MessageEvent) => {
+      //  Origin check: only accept messages from our own domain
+      if (event.origin !== window.location.origin) return;
 
-            const { accessToken, expiresIn, user } = event.data.payload || {};
+      // Only handle oauth messages (ignore unrelated postMessages)
+      if (!event.data || event.data.type !== 'oauth_callback') return;
 
-            if (!accessToken || !expiresIn || !user) {
-                clearInterval(timer);
-                window.removeEventListener('message', handleMessage);
-                reject(new Error('Invalid token payload received'));
-                return;
-            }
+      cleanup();
 
-            // Cleanup
-            clearInterval(timer);
-            window.removeEventListener('message', handleMessage);
-            popup?.close();
+      if (event.data.error) {
+        reject(new Error(event.data.error));
+        return;
+      }
 
-            // Update global auth state
-            login(user, accessToken, expiresIn);
+      const payload = event.data.payload as OAuthResponse;
+      login(payload.user, payload.accessToken, payload.expiresIn);
+      resolve(payload);
+    };
 
-            // Pass data to TanStack Query's onSuccess
-            resolve(event.data.payload);
-        };
+    // Clean up if user closes the popup manually
+    const pollClosed = setInterval(() => {
+      if (popup.closed) {
+        cleanup();
+        reject(new Error('OAuth popup was closed before completing sign-in.'));
+      }
+    }, 500);
 
-        window.addEventListener('message', handleMessage);
-    });
+    const cleanup = () => {
+      window.removeEventListener('message', handleMessage);
+      clearInterval(pollClosed);
+    };
+
+    window.addEventListener('message', handleMessage);
+  });
 };

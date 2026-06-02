@@ -6,50 +6,56 @@ import { HttpExceptionFilter } from './http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { ResponseTransformInterceptor } from './response-transform.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, autoFlushLogs: true });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  app.enableCors({
-    origin: envConfig.app.corsAllowedOrigins || [],
-    credentials: true,
-  });
-
-  app.use(cookieParser());
-
-  // graceful shutdown of application
-  app.enableShutdownHooks();
-  // enable global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    forbidNonWhitelisted: true,
-  }));
-  // global constient exception filter
-  app.useGlobalFilters(new HttpExceptionFilter());
-
+  // Logging
   const logger = app.get(Logger);
   app.useLogger(logger);
 
+  // Cookie parser
+  app.use(cookieParser());
+
+  // CORS
+  app.enableCors({
+    origin: envConfig.app.corsAllowedOrigins?.split(',') ?? [],
+    credentials: true,
+  });
+
+  // Global pipes for class validations
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  // Global interceptors
+  // Wraps every 2xx response: { success: true, message: 'OK', data: ... }
+  app.useGlobalInterceptors(new ResponseTransformInterceptor());
+
+  // Global filters
+  // Handles HttpException, Prisma errors, and unknown errors uniformly.
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Swagger
   const config = new DocumentBuilder()
-    .setTitle('Code Runner')
-    .setDescription('The Code Runner API description')
-    .setVersion('0.1')
+    .setTitle('Code Runner API')
+    .setDescription('Remote code execution API')
+    .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
   await app.listen(envConfig.app.port);
-
-  logger.log(`Application started at ${envConfig.app.port}`);
-
-  const shutdown = async () => {
-    await app.close();
-    process.exit(0);
-  };
-
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  logger.log(`Application running on port ${envConfig.app.port}`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Fatal error during bootstrap', err);
+  process.exit(1);
+});

@@ -1,22 +1,25 @@
-export const QUEUE_NAMES = {
-  EXECUTIONS: 'executions',
-};
+export const STRATEGY_NAME = {
+  LOCAL: 'local',
+  JWT: 'jwt',
+  JWT_REFRESH: 'jwt-refresh',
+  GITHUB: 'github',
+  GOOGLE: 'google',
+} as const;
 
-export const NODE_ENVS = {
-  PRODUCTION: 'PRODUCTION',
-  DEVELOPMENT: 'DEVELOPMENT',
-}
+export const COOKIE_NAME = {
+  REFRESH_TOKEN: 'refreshToken',
+} as const;
 
 export const IS_PUBLIC_KEY = 'isPublic';
 
-export const STRATEGY_NAME = {
-  LOCAL: "LOCAL",
-  GITHUB: "GITHUB",
-  GOOGLE: "GOOGLE",
-  JWT: "JWT",
-  JWT_REFRESH: "JWT_REFRESH",
-}
+export const QUEUE_NAMES = {
+  EXECUTION: 'execution',
+} as const;
 
-export const COOKIE_NAME = {
-  REFRESH_TOKEN: "REFRESH_TOKEN"
-}
+export const NODE_ENVS = {
+  DEVELOPMENT: 'development',
+  PRODUCTION: 'production',
+  TEST: 'test',
+} as const;
+
+export const BCRYPT_ROUNDS = 10;
