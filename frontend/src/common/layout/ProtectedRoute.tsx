@@ -18,7 +18,7 @@ const ProtectedRoute = () => {
     }, [status, init]);
 
     if (status === "idle" || status === "loading") return <Spinner />;
-    if (!isAuthenticated) return <Navigate to={URLs.login} replace />;
+    if (!isAuthenticated) return <Navigate to={URLs.auth.login} replace />;
     return <Outlet />;
 };
 

@@ -2,7 +2,12 @@ import { useTheme } from "@/common/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/store/auth.store";
+import type { LogoutResponse } from "@/types/auth/auth";
+import authApi from "@/types/auth/authApi";
+import mutate from "@/utils/request/mutate";
+import { useMutation } from "@tanstack/react-query";
 import { Code2, LogOutIcon, Moon, Sun, User } from "lucide-react";
+import { toast } from "sonner";
 
 function ThemeToggle() {
     const { theme, setTheme } = useTheme();
@@ -24,8 +29,20 @@ function ThemeToggle() {
 }
 
 const Navbar = () => {
-    const logout = useAuthStore((state) => state.handleLogout);
+    const handleLogout = useAuthStore((state) => state.handleLogout);
     const user = useAuthStore((state) => state.user);
+
+    const { mutate: logout, isPending } = useMutation({
+        mutationKey: ["UserLogout"],
+        mutationFn: mutate(authApi.auth.logout),
+        onSuccess: (data: LogoutResponse) => {
+            toast.success(data.message);
+            handleLogout();
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        }
+    })
 
     return (
         <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4">
@@ -76,7 +93,7 @@ const Navbar = () => {
 
                 <ThemeToggle />
 
-                <Button variant="secondary" onClick={logout}>
+                <Button variant="secondary" onClick={() => logout({})} loading={isPending}>
                     <LogOutIcon className="h-4 w-4" />
                 </Button>
             </div>

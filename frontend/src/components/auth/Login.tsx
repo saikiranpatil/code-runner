@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
+
+import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -11,14 +13,12 @@ import { Label } from '@/components/ui/label';
 
 import { URLs } from '@/common/urls';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/auth.store';
 import AuthFormLayout from '@/components/auth/AuthFormLayout';
 import authApi from '@/types/auth/authApi';
 import mutate from '@/utils/request/mutate';
-import query from '@/utils/request/query';
 import type { LoginResponse } from '@/types/auth/auth';
-import { z } from 'zod'
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },
@@ -67,12 +67,6 @@ export default function Login() {
             navigate(URLs.home);
         },
     });
-    const { data } = useQuery({
-        queryFn: query(authApi.auth.login),
-        queryKey: ["SD"]
-    });
-
-    console.log(data);
 
     const onSubmit = (values: LoginFormValues) => {
         handleLogin(values);

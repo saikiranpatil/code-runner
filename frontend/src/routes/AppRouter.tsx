@@ -32,7 +32,7 @@ export default function AppRouter() {
 
             <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
-                    <Route path={URLs.home} element={<Navigate to={URLs.problems.list} replace />} />
+                    <Route path={URLs.home} element={<Navigate to={URLs.problems.details} replace />} />
                     <Route path={URLs.problems.details} element={<Problem />} />
                 </Route>
             </Route>

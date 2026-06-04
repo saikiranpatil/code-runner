@@ -5,7 +5,6 @@ export const URLs = {
     register: '/register',
   },
   problems: {
-    list: '/problems',
     details: '/problems'
   },
   oauthCallback: '/oauth/callback',

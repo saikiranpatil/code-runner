@@ -1,4 +1,4 @@
-import type { User } from '@/module/user/user.types';
+import type { User } from '@/types/auth/auth';
 import authApi from '@/types/auth/authApi';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
