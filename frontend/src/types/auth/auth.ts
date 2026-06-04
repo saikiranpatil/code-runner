@@ -1,27 +1,35 @@
-export interface UserProfile {
-  id: string;
+export interface User {
+  id: number;
   email: string;
-  name?: string;
+  name: string;
+  emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface AuthSuccessPayload {
+  user: User;
   accessToken: string;
-  user: UserProfile;
-}
-
-export interface RegisterRequest {
-  email: string;
-  name?: string;
-  password?: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password?: string;
+  expiresIn: number;
 }
 
 export interface LogoutResponse {
   message: string;
 }
+
+export interface LoginRequest {
+  email: string,
+  password: string,
+}
+
+export type LoginResponse = AuthSuccessPayload;
+
+export interface RegisterRequest {
+  email: string,
+  name: string,
+  password: string,
+}
+
+export type RegisterResponse = AuthSuccessPayload;
+
+export type RefreshResponse = AuthSuccessPayload;

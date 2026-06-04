@@ -9,20 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { URLs } from '@/shared/urls';
+import { URLs } from '@/common/urls';
 
-import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
-
-import {
-    loginSchema,
-    type LoginFormValues,
-} from '@/module/auth/schema/login.schema';
-import { useAuthStore } from '../auth.store';
-import type { LoginResponse } from '../auth.dto';
-import AuthFormLayout from '@/components/layout/AuthFormLayout';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '../../store/auth.store';
+import AuthFormLayout from '@/components/auth/AuthFormLayout';
 import authApi from '@/types/auth/authApi';
 import mutate from '@/utils/request/mutate';
 import query from '@/utils/request/query';
+import type { LoginResponse } from '@/types/auth/auth';
+import { z } from 'zod'
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },
@@ -40,6 +36,18 @@ export default function Login() {
     const navigate = useNavigate();
     const login = useAuthStore((state) => state.handleLogin);
 
+    const loginSchema = z.object({
+        email: z
+            .email('Enter a valid email address')
+            .min(1, 'Email is required'),
+        password: z
+            .string()
+            .min(1, 'Password is required')
+            .min(8, 'Password must be at least 8 characters'),
+    });
+
+    type LoginFormValues = z.infer<typeof loginSchema>;
+
     const {
         register,
         handleSubmit,
@@ -49,13 +57,12 @@ export default function Login() {
         defaultValues: {
             email: '',
             password: '',
-            rememberMe: false,
         },
     });
 
     const { mutate: handleLogin, isPending } = useMutation({
         mutationFn: mutate(authApi.auth.login),
-        onSuccess: (data) => {
+        onSuccess: (data: LoginResponse) => {
             login(data.user, data.accessToken, data.expiresIn);
             navigate(URLs.home);
         },
@@ -67,7 +74,7 @@ export default function Login() {
 
     console.log(data);
 
-    const onSubmit = (values) => {
+    const onSubmit = (values: LoginFormValues) => {
         handleLogin(values);
     };
 
@@ -79,7 +86,7 @@ export default function Login() {
                 <p className="mt-6 text-center text-sm text-muted-foreground">
                     Don't have an account?{' '}
                     <Link
-                        to={URLs.auth.register}
+                        to={URLs.auth.login}
                         className="font-medium text-foreground hover:underline"
                     >
                         Create one

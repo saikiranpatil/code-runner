@@ -21,7 +21,7 @@ export type PathParams<T extends string> = {
 
 export interface ApiRoute<TData, TBody = unknown> {
   path: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method: HttpMethod;
   TRes: TData;
   TBody?: TBody;
   noAuth?: boolean;
@@ -73,10 +73,4 @@ export function Type<T>(): T {
   return {} as T;
 }
 
-export const HttpMethod = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  DELETE: 'DELETE',
-  PATCH: 'PATCH'
-};
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';

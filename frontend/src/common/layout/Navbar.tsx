@@ -1,7 +1,7 @@
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/common/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useAuthStore } from "@/module/auth/auth.store";
+import { useAuthStore } from "@/store/auth.store";
 import { Code2, LogOutIcon, Moon, Sun, User } from "lucide-react";
 
 function ThemeToggle() {

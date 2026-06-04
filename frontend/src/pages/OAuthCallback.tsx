@@ -10,7 +10,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '@/components/ui/spinner';
-import { URLs } from '@/shared/urls';
+import { URLs } from '@/common/urls';
 
 export default function OAuthCallback() {
   const navigate = useNavigate();

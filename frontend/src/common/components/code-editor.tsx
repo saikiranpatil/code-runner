@@ -8,7 +8,7 @@ import type {
 } from "@monaco-editor/react";
 
 import type * as Monaco from "monaco-editor";
-import { useTheme } from "./theme-provider";
+import { useTheme } from "@/common/components/theme-provider";
 
 const options: Monaco.editor.IStandaloneEditorConstructionOptions = {
     fontSize: 14,

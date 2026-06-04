@@ -1,7 +1,7 @@
 import React from 'react';
 import AppRouter from './routes/AppRouter';
 import { useEffect } from 'react';
-import { useAuthStore } from '@/module/auth/auth.store';
+import { useAuthStore } from '@/store/auth.store';
 
 interface ErrorBoundaryState {
   error: Error | null;

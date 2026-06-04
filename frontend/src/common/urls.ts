@@ -1,8 +1,13 @@
 export const URLs = {
   home: '/',
-  login: '/login',
-  register: '/register',
-  problems: '/problems',
+  auth: {
+    login: '/login',
+    register: '/register',
+  },
+  problems: {
+    list: '/problems',
+    details: '/problems'
+  },
   oauthCallback: '/oauth/callback',
   notFound: '*',
 } as const;

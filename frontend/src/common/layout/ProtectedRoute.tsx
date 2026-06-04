@@ -1,11 +1,11 @@
 import { Navigate, Outlet } from "react-router-dom";
 import Spinner from "@/components/ui/spinner";
-import { URLs } from "@/shared/urls";
+import { URLs } from "@/common/urls";
 import {
     selectAuthStatus,
     selectIsAuthenticated,
     useAuthStore,
-} from "@/module/auth/auth.store";
+} from "@/store/auth.store";
 import { useEffect } from "react";
 
 const ProtectedRoute = () => {

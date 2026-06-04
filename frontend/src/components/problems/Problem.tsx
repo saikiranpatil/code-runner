@@ -33,10 +33,10 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import CodeEditor from "@/components/code-editor"
+import CodeEditor from "@/common/components/code-editor"
 
 import { useMutation } from "@tanstack/react-query"
-import { LANGUAGES } from "@/shared/constants"
+import { LANGUAGES } from "@/common/constants"
 
 interface ExecutionResult {
     stdout: string

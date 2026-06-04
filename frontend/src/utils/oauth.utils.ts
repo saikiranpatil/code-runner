@@ -1,4 +1,4 @@
-import type { AuthProvider, OAuthResponse } from '../auth.types';
+import type { AuthProvider, OAuthResponse } from '../module/auth/auth.types';
 
 export const handleOAuthClick = (
   login: (user: any, token: string, expiresIn: number) => void,

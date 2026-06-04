@@ -5,7 +5,7 @@ import type {
   AxiosResponse,
 } from 'axios';
 import type { ApiResponse } from '@/api/types';
-import { getAuthState } from '@/module/auth/auth.store';
+import { getAuthState } from '@/store/auth.store';
 import type { RefreshResponse } from '@/module/auth/auth.dto';
 import authApi from '@/types/auth/authApi';
 

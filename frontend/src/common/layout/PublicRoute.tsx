@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import Spinner from "@/components/ui/spinner";
-import { useAuthStore } from "@/module/auth/auth.store";
+import { useAuthStore } from "@/store/auth.store";
 
 const PublicRoute = () => {
   const { status } = useAuthStore();

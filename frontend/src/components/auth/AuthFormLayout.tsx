@@ -7,14 +7,14 @@ import { FcGoogle } from 'react-icons/fc';
 import { HiCubeTransparent } from 'react-icons/hi2';
 import { useMutation } from '@tanstack/react-query';
 
-import { handleOAuthClick } from '@/module/auth/utils/oauth.utils';
+import { handleOAuthClick } from '@/utils/oauth.utils';
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import SidePanel from '@/module/auth/components/SidePanel';
+import SidePanel from '@/components/auth/SidePanel';
 
-import { URLs } from '@/shared/urls';
-import { useAuthStore } from '@/module/auth/auth.store';
+import { URLs } from '@/common/urls';
+import { useAuthStore } from '@/store/auth.store';
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },

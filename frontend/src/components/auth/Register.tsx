@@ -11,17 +11,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { URLs } from '@/shared/urls';
-import { ENDPOINTS } from '@/api/endpoints';
-import { mutate } from '@/utils/request/mutate';
+import { URLs } from '@/common/urls';
 
-import {
-    registerSchema,
-    type RegisterFormValues,
-} from '@/module/auth/schema/register.schema';
-import AuthFormLayout from '@/components/layout/AuthFormLayout';
-import { useAuthStore } from '../auth.store';
-import type { RegisterResponse } from '../auth.dto';
+import AuthFormLayout from '@/components/auth/AuthFormLayout';
+import { useAuthStore } from '../../store/auth.store';
+import { z } from 'zod'
+import mutate from '@/utils/request/mutate';
+import authApi from '@/types/auth/authApi';
+import type { RegisterResponse } from '@/types/auth/auth';
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },
@@ -39,6 +36,18 @@ export default function Register() {
     const navigate = useNavigate();
     const login = useAuthStore(store => store.handleLogin);
 
+    const registerSchema = z.object({
+        email: z.email('Invalid email'),
+        name: z.string().min(1, 'Name is required'),
+        password: z.string().min(8),
+        confirmPassword: z.string(),
+    }).refine(d => d.password === d.confirmPassword, {
+        message: "Passwords don't match",
+        path: ['confirmPassword'],
+    })
+
+    type RegisterFormValues = z.infer<typeof registerSchema>;
+
     const {
         register,
         handleSubmit,
@@ -54,11 +63,11 @@ export default function Register() {
     });
 
     const { mutate: handleRegister, isPending } = useMutation({
-        mutationFn: mutate(ENDPOINTS.AUTH.REGISTER),
+        mutationFn: mutate(authApi.auth.register),
         onSuccess: (data: RegisterResponse) => {
             console.log("REGISTER SUCCESS DATA", data);
             login(data.user, data.accessToken, data.expiresIn);
-            navigate(URLs.home.base);
+            navigate(URLs.home);
         },
     });
 

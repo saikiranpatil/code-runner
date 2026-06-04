@@ -8,7 +8,7 @@ import { QueryClientProvider } from "@tanstack/react-query"
 
 import App from "./App.tsx"
 
-import { ThemeProvider } from "@/components/theme-provider.tsx"
+import { ThemeProvider } from "@/common/components/theme-provider.tsx"
 import { TooltipProvider } from "@/components/ui/tooltip.tsx"
 import { Toaster } from "@/components/ui/sonner.tsx"
 
