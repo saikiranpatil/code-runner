@@ -1,13 +1,18 @@
 import { useTheme } from "@/common/components/theme-provider";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import {
+    Avatar,
+    AvatarFallback,
+    AvatarImage
+} from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/auth.store";
 import type { LogoutResponse } from "@/types/auth/auth";
 import authApi from "@/types/auth/authApi";
 import mutate from "@/utils/request/mutate";
 import { useMutation } from "@tanstack/react-query";
-import { Code2, LogOutIcon, Moon, Sun, User } from "lucide-react";
+import { Code2, LogOutIcon, Moon, Sun, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import queryClient from "@/utils/request/queryClient";
 
 function ThemeToggle() {
     const { theme, setTheme } = useTheme();
@@ -32,70 +37,87 @@ const Navbar = () => {
     const handleLogout = useAuthStore((state) => state.handleLogout);
     const user = useAuthStore((state) => state.user);
 
+    // Helper to extract clean initials from the user's name
+    const getUserInitials = () => {
+        if (!user?.name) return "U";
+        return user.name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .substring(0, 2);
+    };
+
     const { mutate: logout, isPending } = useMutation({
         mutationKey: ["UserLogout"],
         mutationFn: mutate(authApi.auth.logout),
         onSuccess: (data: LogoutResponse) => {
+            queryClient.invalidateQueries({ queryKey: ["UserLogout"] });
             toast.success(data.message);
             handleLogout();
         },
-        onError: (error) => {
+        onError: (error: any) => {
             toast.error(error.message);
         }
-    })
+    });
 
     return (
         <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4">
+            {/* Left side: Branding */}
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                         <Code2 className="h-4 w-4" />
                     </div>
-
-                    <div>
-                        <h1 className="font-heading text-sm font-semibold">
-                            Code Runner
-                        </h1>
-
-                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                            Coding Platform
-                        </p>
-                    </div>
-                </div>
-
-                <Separator orientation="vertical" className="h-6" />
-
-                <div className="hidden items-center gap-2 md:flex">
-                    <Button variant="ghost" size="sm">Problems</Button>
-                    <Button variant="ghost" size="sm">Contests</Button>
-                    <Button variant="ghost" size="sm">Discuss</Button>
+                    <span className="font-semibold text-sm hidden sm:inline-block">
+                        DevPlatform
+                    </span>
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
-                {user && (
-                    <div className="hidden md:flex items-center gap-3 rounded-lg border px-3 py-1.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                            <User className="h-4 w-4" />
-                        </div>
-
-                        <div className="flex flex-col leading-none">
-                            <span className="text-sm font-medium">
-                                {user.name}
-                            </span>
-
-                            <span className="text-xs text-muted-foreground">
-                                {user.email}
-                            </span>
-                        </div>
-                    </div>
-                )}
-
+            {/* Right side: Actions & User Info */}
+            <div className="flex items-center gap-4">
                 <ThemeToggle />
 
-                <Button variant="secondary" onClick={() => logout({})} loading={isPending}>
-                    <LogOutIcon className="h-4 w-4" />
-                </Button>
+                {user ? (
+                    <div className="flex items-center gap-4 border-l pl-4 border-border">
+                        {/* Avatar & Profile Information */}
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 border border-border">
+                                <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                <AvatarFallback className="text-xs font-medium bg-muted">
+                                    {getUserInitials()}
+                                </AvatarFallback>
+                            </Avatar>
+
+                            {/* Name & Email Layout */}
+                            <div className="hidden md:flex flex-col text-left">
+                                <span className="text-sm font-medium leading-none text-foreground">
+                                    {user.name}
+                                </span>
+                                <span className="text-xs text-muted-foreground mt-0.5 max-w-37.5 truncate">
+                                    {user.email}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Logout Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => logout({})}
+                            disabled={isPending}
+                            className="rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            title="Log out"
+                        >
+                            <LogOutIcon className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ) : (
+                    <Button variant="outline" size="sm" className="rounded-xl gap-2">
+                        <UserIcon className="h-4 w-4" /> Login
+                    </Button>
+                )}
             </div>
         </header>
     );

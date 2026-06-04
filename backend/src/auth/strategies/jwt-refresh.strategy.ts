@@ -25,12 +25,12 @@ export class JwtRefreshStrategy extends PassportStrategy(
 
   async validate(req: Request, payload: JwtRefreshPayload) {
     if (payload.type !== 'refresh') {
-      throw new UnauthorizedException('Invalid token.');
+      throw new UnauthorizedException('Invalid User.');
     }
 
     const rawToken = req.cookies?.[COOKIE_NAME.REFRESH_TOKEN];
     if (!rawToken) {
-      throw new UnauthorizedException('Refresh token not found.');
+      throw new UnauthorizedException('Invalid User.');
     }
 
     // validateRefreshToken compares the raw token against the stored hash

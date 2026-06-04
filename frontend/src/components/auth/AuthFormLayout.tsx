@@ -7,14 +7,14 @@ import { FcGoogle } from 'react-icons/fc';
 import { HiCubeTransparent } from 'react-icons/hi2';
 import { useMutation } from '@tanstack/react-query';
 
-import { handleOAuthClick } from '@/utils/oauth.utils';
-
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import SidePanel from '@/components/auth/SidePanel';
 
 import { URLs } from '@/common/urls';
 import { useAuthStore } from '@/store/auth.store';
+import { handleOAuthClick } from './utils/Oauth';
+import queryClient from '@/utils/request/queryClient';
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -56,15 +56,18 @@ export default function AuthFormLayout({
     const login = useAuthStore((state) => state.handleLogin);
 
     const handleSocialLogin = useCallback(() => {
-        navigate(URLs.problems);
+        queryClient.invalidateQueries({ queryKey: ["OAuth"] });
+        navigate(URLs.problems.details);
     }, []);
 
     const { mutate: handleGoogleLogin, isPending: isGooglePending } = useMutation({
+        mutationKey: ["OAuth"],
         mutationFn: () => handleOAuthClick(login, "google"),
         onSuccess: handleSocialLogin
     });
 
     const { mutate: handleGithubLogin, isPending: isGithubPending } = useMutation({
+        mutationKey: ["OAuth"],
         mutationFn: () => handleOAuthClick(login, "github"),
         onSuccess: handleSocialLogin
     });

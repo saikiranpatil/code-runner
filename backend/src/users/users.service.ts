@@ -5,6 +5,7 @@ import { hash } from 'bcrypt';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { randomBytes } from 'crypto';
 import { BCRYPT_ROUNDS } from '../common/constants';
+import { email } from 'zod';
 
 @Injectable()
 export class UsersService {
@@ -49,18 +50,24 @@ export class UsersService {
     async createOAuthUser(data: {
         email: string;
         name?: string;
+        avatarUrl?: string;
     }): Promise<User> {
-        const existing = await this.findByEmail(data.email);
-        if (existing) return existing;
-
+        const email = data.email.toLowerCase().trim();
         // Random password, OAuth users log in via provider, not password
         const passwordHash = await hash(randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
-        return this.prisma.user.create({
-            data: {
-                email: data.email.toLowerCase().trim(),
+
+        return this.prisma.user.upsert({
+            where: { email: email },
+            update: {
+                // Conditionally update avatar only if a new one is provided
+                ...(data.avatarUrl && { avatarUrl: data.avatarUrl }),
+            },
+            create: {
+                email: email,
                 name: data.name ?? null,
                 passwordHash,
                 emailVerified: true,
+                avatarUrl: data.avatarUrl ?? null,
             },
         });
     }

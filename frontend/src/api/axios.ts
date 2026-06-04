@@ -6,8 +6,8 @@ import type {
 } from 'axios';
 import type { ApiResponse } from '@/api/types';
 import { getAuthState } from '@/store/auth.store';
-import type { RefreshResponse } from '@/module/auth/auth.dto';
 import authApi from '@/types/auth/authApi';
+import type { RefreshResponse } from '@/types/auth/auth';
 
 // Queue for requests that arrive while a token refresh is in flight
 interface QueueEntry {
@@ -87,7 +87,7 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const { data } = await api.post<ApiResponse<RefreshResponse>>(authApi.auth.refresh.path);
+      const { data } = await api.post<ApiResponse<RefreshResponse>>(authApi.auth.refresh.path, {}, { silent: true } as any);
 
       // data is already unwrapped by the response interceptor above,
       // but this call may run before the interceptor on the inner axios call.

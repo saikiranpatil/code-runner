@@ -22,7 +22,7 @@ export const envSchema = z.object({
         .default(NODE_ENVS.DEVELOPMENT),
     BCRYPT_SALT_ROUNDS: z.coerce.number().default(10),
 
-    FRONTEND_URL: z.url().default("http://localhost:5173/"),
+    FRONTEND_URL: z.url().default("http://localhost:5173"),
 
     // Redis
     REDIS_HOST: z.string().default('localhost'),

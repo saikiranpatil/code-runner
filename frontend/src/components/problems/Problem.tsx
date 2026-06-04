@@ -37,6 +37,7 @@ import CodeEditor from "@/common/components/code-editor"
 
 import { useMutation } from "@tanstack/react-query"
 import { LANGUAGES } from "@/common/constants"
+import queryClient from "@/utils/request/queryClient"
 
 interface ExecutionResult {
     stdout: string
@@ -51,7 +52,9 @@ export default function Problem() {
     const [code, setCode] = useState('console.log("hello from js")');
     const [language, setLanguage] = useState("javascript");
     const [resultsActiveTab, setResultsActiveTab] = useState<"results" | "testcases" | "console">("results");
+
     const executeCodeMutation = useMutation<ExecutionResult, Error>({
+        mutationKey: ["Problem"],
         mutationFn: async () => {
             // 1. Submit job
             const response = await fetch("/execute", {
@@ -101,6 +104,7 @@ export default function Problem() {
         },
 
         onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ["Problems"] });
             setResultsActiveTab("results");
             console.log("Execution Result:", data);
         },
@@ -192,7 +196,7 @@ export default function Problem() {
                                             <SelectContent className="rounded-xl">
                                                 <SelectGroup>
                                                     {LANGUAGES.map(({ label, value }) => (
-                                                        <SelectItem value={value}>{label}</SelectItem>
+                                                        <SelectItem key={`problem_${label}_${value}`} value={value}>{label}</SelectItem>
                                                     ))}
                                                 </SelectGroup>
                                             </SelectContent>

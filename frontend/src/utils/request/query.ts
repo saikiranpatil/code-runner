@@ -25,8 +25,10 @@ export async function callApi<Route extends ApiRoute<unknown, unknown>>(
     const isSilent =
       typeof options?.silent === 'boolean' ? options.silent : false;
 
+    const responseErrorMessage = error.response?.data?.message;
+
     throw new HTTPError({
-      message: error.message ?? 'Request Failed',
+      message: responseErrorMessage || error.message || 'Request Failed',
       status: error.response?.status ?? 0,
       silent: isSilent,
       cause: error.response?.data,

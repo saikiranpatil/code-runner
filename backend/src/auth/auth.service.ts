@@ -79,12 +79,12 @@ export class AuthService {
   ): Promise<SafeUser> {
     const user = await this.usersService.findById(userId);
     if (!user?.refreshTokenHash) {
-      throw new ForbiddenException('Refresh token is invalid or expired.');
+      throw new ForbiddenException('Invalid User');
     }
 
     const isValid = await compare(rawToken, user.refreshTokenHash);
     if (!isValid) {
-      throw new ForbiddenException('Refresh token is invalid or expired.');
+      throw new ForbiddenException('Invalid User');
     }
 
     const { passwordHash, refreshTokenHash, ...safe } = user;

@@ -26,9 +26,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
         typeof raw === 'string'
           ? { message: raw, errors: [] }
           : {
-              message: (raw as any).error ?? exception.message,
-              errors: Array.isArray((raw as any).message)
-                ? (raw as any).message
+              message: (raw as any).message ?? exception.message,
+              errors: Array.isArray((raw as any).error)
+                ? (raw as any).error
                 : [],
             };
 

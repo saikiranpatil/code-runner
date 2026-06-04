@@ -19,6 +19,8 @@ import AuthFormLayout from '@/components/auth/AuthFormLayout';
 import authApi from '@/types/auth/authApi';
 import mutate from '@/utils/request/mutate';
 import type { LoginResponse } from '@/types/auth/auth';
+import { toast } from 'sonner';
+import queryClient from '@/utils/request/queryClient';
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },
@@ -61,8 +63,11 @@ export default function Login() {
     });
 
     const { mutate: handleLogin, isPending } = useMutation({
+        mutationKey: ["UserLogin"],
         mutationFn: mutate(authApi.auth.login),
         onSuccess: (data: LoginResponse) => {
+            queryClient.invalidateQueries({ queryKey: ["UserLogin"] });
+
             login(data.user, data.accessToken, data.expiresIn);
             navigate(URLs.home);
         },

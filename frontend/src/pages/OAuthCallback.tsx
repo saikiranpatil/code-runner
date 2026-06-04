@@ -28,7 +28,7 @@ export default function OAuthCallback() {
         );
         window.close();
       } else {
-        navigate(URLs.login);
+        navigate(URLs.auth.login);
       }
       return;
     }
@@ -53,7 +53,7 @@ export default function OAuthCallback() {
         );
         window.close();
       } else {
-        navigate(URLs.login);
+        navigate(URLs.auth.login);
       }
     }
   }, [navigate]);

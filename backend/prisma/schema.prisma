@@ -16,6 +16,7 @@ model User {
   passwordHash     String
   emailVerified    Boolean @default(false)
   refreshTokenHash String?
+  avatarUrl        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

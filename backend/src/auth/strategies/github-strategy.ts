@@ -18,12 +18,14 @@ export class GithubStrategy extends PassportStrategy(Strategy, STRATEGY_NAME.GIT
 
     async validate(_accessToken: string, _refreshToken: string, profile: Profile) {
         const primaryEmail = profile.emails?.[0]?.value ?? `${profile.id}@github.noemail`;
+        const avatarUrl = profile.photos?.[0]?.value;
+
         let user = await this.usersService.findByEmail(primaryEmail);
         if (!user) {
-            // Create with a random passwordHash since they'll only use OAuth
             user = await this.usersService.createOAuthUser({
                 email: primaryEmail,
                 name: profile.displayName || profile.username || 'GitHub User',
+                avatarUrl
             });
         }
         return user;

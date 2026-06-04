@@ -1,5 +1,5 @@
 import type { ApiErrorResponse } from '@/api/types';
-import type { AxiosError } from 'axios';
+import axios, { type AxiosError } from 'axios';
 
 export interface ParsedError {
   message: string;
@@ -7,43 +7,53 @@ export interface ParsedError {
   statusCode: number;
 }
 
-const isAxiosError = (error: unknown): error is AxiosError =>
-  typeof error === 'object' &&
-  error !== null &&
-  (error as any).isAxiosError === true;
+// Safely identifies if the error stems from Axios directly or your HTTPError wrapper
+const getAxiosError = (error: unknown): AxiosError | null => {
+  if (axios.isAxiosError(error)) return error;
+  // If it's your custom HTTPError wrapper, Axios error object resides inside 'cause'
+  if (error && typeof error === 'object' && 'cause' in error && axios.isAxiosError((error as any).cause)) {
+    return (error as any).cause;
+  }
+  return null;
+};
 
-/**
- * Converts any thrown value into a consistent ParsedError.
- *
- * - AxiosError with a shaped backend response → uses the backend message/errors
- * - AxiosError without a body → uses the HTTP status text
- * - Unknown Error → re-throws so the ErrorBoundary can catch it
- * - Anything else → returns a generic ParsedError
- */
 export const parseApiError = (error: unknown): ParsedError => {
-  if (isAxiosError(error)) {
-    const statusCode = error.response?.status ?? 0;
-    const data = error.response?.data as ApiErrorResponse | undefined;
+  const axiosError = getAxiosError(error);
+
+  if (axiosError) {
+    const statusCode = axiosError.response?.status ?? 0;
+    const data = axiosError.response?.data as ApiErrorResponse | undefined;
 
     if (data && typeof data === 'object') {
-      return {
-        message: data.message || error.message || 'Something went wrong.',
-        errors: Array.isArray(data.errors) ? data.errors : [],
-        statusCode,
-      };
+      let message = 'Something went wrong.';
+      let errors: string[] = [];
+
+      // NestJS class-validator bundles error arrays directly into the 'message' field
+      if (Array.isArray(data.message)) {
+        errors = data.message;
+        message = errors[0] || 'Validation failed.';
+      } else if (typeof data.message === 'string') {
+        message = data.message;
+        errors = Array.isArray(data.errors) ? data.errors : [];
+      }
+
+      return { message, errors, statusCode };
     }
 
-    // Network error or no body
     return {
-      message: error.message || 'Network error. Please check your connection.',
+      message: axiosError.message || 'Network error. Please check your connection.',
       errors: [],
       statusCode,
     };
   }
 
-  // Real programming error, let the ErrorBoundary handle it
+  // Fallthrough for native/runtime javascript errors
   if (error instanceof Error) {
-    throw error;
+    return {
+      message: error.message,
+      errors: [],
+      statusCode: 0,
+    };
   }
 
   return {
