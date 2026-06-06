@@ -74,13 +74,13 @@ export class ExecutorService {
       ) => {
         const current = target === 'stdout' ? stdout : stderr;
         const text = chunk.toString('utf8');
-        
+
         const remaining = maxBytes - current.length;
         if (remaining <= 0) {
           outputLimitHit = true;
           return;
         }
-        
+
         const trimmed = text.slice(0, remaining);
         if (target === 'stdout') stdout += trimmed;
         else stderr += trimmed;
@@ -106,7 +106,7 @@ export class ExecutorService {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        
+
         // Always attempt cleanup even on normal exit
         killContainer();
 
@@ -118,13 +118,13 @@ export class ExecutorService {
 
       child.on('error', (err) => {
         if (settled) return;
-        
+
         settled = true;
         clearTimeout(timer);
         killContainer();
-        
+
         this.logger.error(`Executor spawn error: ${err.message}`, err.stack);
-        
+
         reject(err);
       });
     });

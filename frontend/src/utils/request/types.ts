@@ -59,12 +59,6 @@ export class HTTPError extends Error {
   }
 }
 
-export interface ApiResponseEnvelope<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
-
 /**
  * A fake function that returns an empty object casted to type T
  * @returns Empty object as type T
@@ -74,3 +68,12 @@ export function Type<T>(): T {
 }
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+export function defineRoute<TRes, TBody = void>(
+  config: Omit<ApiRoute<TRes, TBody>, 'TRes' | 'TBody'> & {
+    TRes?: TRes;
+    TBody?: TBody;
+  }
+): ApiRoute<TRes, TBody> {
+  return config as ApiRoute<TRes, TBody>;
+}

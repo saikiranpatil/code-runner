@@ -63,7 +63,7 @@ export default function Register() {
     });
 
     const { mutate: handleRegister, isPending } = useMutation({
-        mutationFn: mutate(authApi.auth.register),
+        mutationFn: mutate(authApi.register),
         onSuccess: (data: RegisterResponse) => {
             console.log("REGISTER SUCCESS DATA", data);
             login(data.user, data.accessToken, data.expiresIn);

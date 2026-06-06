@@ -11,11 +11,11 @@ import type { ApiRoute, ApiCallOptions } from './types';
  * });
  * ```
  */
-export default function mutate<Route extends ApiRoute<unknown, unknown>>(
-  route: Route,
-  options?: ApiCallOptions<Route>,
+export default function mutate<TRes, TBody>(
+  route: ApiRoute<TRes, TBody>,
+  options?: ApiCallOptions<ApiRoute<TRes, TBody>>,
 ) {
-  return (variables: Route["TBody"]) => {
+  return (variables: TBody) => {
     return callApi(route, { ...options, body: variables });
   };
 }

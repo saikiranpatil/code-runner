@@ -2,10 +2,10 @@ import api from '@/api/axios';
 import { buildUrl } from '@/utils';
 import { HTTPError, type ApiRoute, type ApiCallOptions } from './types';
 
-export async function callApi<Route extends ApiRoute<unknown, unknown>>(
-  route: Route,
-  options?: ApiCallOptions<Route>,
-): Promise<Route["TRes"]> {
+export async function callApi<TRes, TBody>(
+  route: ApiRoute<TRes, TBody>,
+  options?: ApiCallOptions<ApiRoute<TRes, TBody>>,
+): Promise<TRes> {
   const url = buildUrl(
     route.path,
     options?.pathParams as Record<string, any> | undefined,
@@ -13,7 +13,7 @@ export async function callApi<Route extends ApiRoute<unknown, unknown>>(
   );
 
   try {
-    const response = await api.request<Route["TRes"]>({
+    const response = await api.request<TRes>({
       method: route.method,
       url,
       data: options?.body,
@@ -47,9 +47,9 @@ export async function callApi<Route extends ApiRoute<unknown, unknown>>(
  * });
  * ```
  */
-export default function query<Route extends ApiRoute<unknown, unknown>>(
-  route: Route,
-  options?: ApiCallOptions<Route>,
+export default function query<TRes, TBody>(
+  route: ApiRoute<TRes, TBody>,
+  options?: ApiCallOptions<ApiRoute<TRes, TBody>>,
 ) {
   return ({ signal }: { signal: AbortSignal }) => {
     return callApi(route, { ...options, signal });

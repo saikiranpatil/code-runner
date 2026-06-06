@@ -61,19 +61,17 @@ export default function AuthFormLayout({
     }, []);
 
     const { mutate: handleGoogleLogin, isPending: isGooglePending } = useMutation({
-        mutationKey: ["OAuth"],
         mutationFn: () => handleOAuthClick(login, "google"),
         onSuccess: handleSocialLogin
     });
 
     const { mutate: handleGithubLogin, isPending: isGithubPending } = useMutation({
-        mutationKey: ["OAuth"],
         mutationFn: () => handleOAuthClick(login, "github"),
         onSuccess: handleSocialLogin
     });
 
     return (
-        <div className="h-full grid lg:grid-cols-2">
+        <div className="min-h-screen grid lg:grid-cols-2">
             <SidePanel />
             <div className="h-full my-4 overflow-y-auto">
                 <div className="flex h-full flex-col justify-center px-8 py-12 sm:px-12 lg:px-16 xl:px-20">

@@ -50,7 +50,7 @@ const Navbar = () => {
 
     const { mutate: logout, isPending } = useMutation({
         mutationKey: ["UserLogout"],
-        mutationFn: mutate(authApi.auth.logout),
+        mutationFn: mutate(authApi.logout),
         onSuccess: (data: LogoutResponse) => {
             queryClient.invalidateQueries({ queryKey: ["UserLogout"] });
             toast.success(data.message);

@@ -20,7 +20,7 @@ const NotFoundPage = () => {
                     </p>
                 </div>
 
-                <Link to={URLs.home.base}>
+                <Link to={URLs.home}>
                     <Button variant="secondary">Go to Dashboard</Button>
                 </Link>
             </motion.div>

@@ -24,11 +24,13 @@ interface AuthState {
 const REFRESH_BUFFER_MS = 60_000;
 
 const doRefresh = async () => {
+  console.log("PROACTIVE REFRESH CALLING...");
   try {
     // Lazy import to avoid circular dependency with axios
     const { default: api } = await import('@/api/axios');
-    const res = await api.post(authApi.auth.refresh.path);
+    const res = await api.post(authApi.refresh.path);
     const { user, accessToken, expiresIn } = res.data;
+    console.log("EXPIRES IN: ", expiresIn, accessToken);
     useAuthStore.getState().handleLogin(user, accessToken, expiresIn);
   } catch {
     useAuthStore.getState().handleLogout();
@@ -48,7 +50,7 @@ export const useAuthStore = create<AuthState>()(
         set({ status: 'loading' });
         try {
           const { default: api } = await import('@/api/axios');
-          const res = await api.post(authApi.auth.refresh.path);
+          const res = await api.post(authApi.refresh.path);
           const { user, accessToken, expiresIn } = res.data;
           get().handleLogin(user, accessToken, expiresIn);
         } catch {
@@ -60,16 +62,16 @@ export const useAuthStore = create<AuthState>()(
         const existing = get()._refreshTimer;
         if (existing) clearTimeout(existing);
 
-        const delay = Math.max(expiresIn - REFRESH_BUFFER_MS, 0);
-        const timer = setTimeout(doRefresh, delay);
-
         set({
           user,
           token,
           status: 'authenticated',
           isAuthenticated: true,
-          _refreshTimer: timer,
         });
+
+        const delay = Math.max(expiresIn - REFRESH_BUFFER_MS, 0);
+        const timer = setTimeout(doRefresh, delay);
+        set({ _refreshTimer: timer });
       },
 
       handleLogout() {

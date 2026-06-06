@@ -15,14 +15,14 @@ import { ExecutorService } from './executor.service';
 export class ExecutorProcessor extends WorkerHost {
     constructor(
         private readonly logger: Logger,
-        private readonly executor: ExecutorService,
+        private readonly executorService: ExecutorService,
     ) {
         super();
     }
 
     async process(job: Job<ExecutionDto>) {
         const { code, language } = job.data;
-        return this.executor.execute(code, language);
+        return this.executorService.execute(code, language);
     }
 
     @OnWorkerEvent('completed')

@@ -67,7 +67,7 @@ api.interceptors.response.use(
     }
 
     // Don't try to refresh if the failing request IS the refresh call
-    if (originalRequest.url?.includes(authApi.auth.refresh.path)) {
+    if (originalRequest.url?.includes(authApi.refresh.path)) {
       getAuthState().handleLogout();
       return Promise.reject(error);
     }
@@ -87,7 +87,7 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const { data } = await api.post<ApiResponse<RefreshResponse>>(authApi.auth.refresh.path, {}, { silent: true } as any);
+      const { data } = await api.post<ApiResponse<RefreshResponse>>(authApi.refresh.path, {}, { silent: true } as any);
 
       // data is already unwrapped by the response interceptor above,
       // but this call may run before the interceptor on the inner axios call.

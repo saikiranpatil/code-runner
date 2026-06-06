@@ -64,13 +64,17 @@ export default function Login() {
 
     const { mutate: handleLogin, isPending } = useMutation({
         mutationKey: ["UserLogin"],
-        mutationFn: mutate(authApi.auth.login),
+        mutationFn: mutate(authApi.login),
         onSuccess: (data: LoginResponse) => {
             queryClient.invalidateQueries({ queryKey: ["UserLogin"] });
 
+            toast.success("Logged in Sucessfully");
             login(data.user, data.accessToken, data.expiresIn);
             navigate(URLs.home);
         },
+        onError: (error) => {
+            toast.error(error.message);
+        }
     });
 
     const onSubmit = (values: LoginFormValues) => {
@@ -85,7 +89,7 @@ export default function Login() {
                 <p className="mt-6 text-center text-sm text-muted-foreground">
                     Don't have an account?{' '}
                     <Link
-                        to={URLs.auth.login}
+                        to={URLs.auth.register}
                         className="font-medium text-foreground hover:underline"
                     >
                         Create one

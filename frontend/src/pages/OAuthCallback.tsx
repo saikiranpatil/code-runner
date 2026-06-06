@@ -9,8 +9,8 @@
  */
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Spinner from '@/components/ui/spinner';
 import { URLs } from '@/common/urls';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function OAuthCallback() {
   const navigate = useNavigate();
@@ -60,7 +60,7 @@ export default function OAuthCallback() {
 
   return (
     <div className="flex items-center justify-center h-screen">
-      <Spinner size="md" />
+      <Spinner fullScreen size="lg" />
     </div>
   );
 }

@@ -35,90 +35,142 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import CodeEditor from "@/common/components/code-editor"
 
-import { useMutation } from "@tanstack/react-query"
+import { Query, useMutation, useQuery } from "@tanstack/react-query"
 import { LANGUAGES } from "@/common/constants"
+import mutate from "@/utils/request/mutate"
+import executionApi from "@/types/execution/executionApi"
+import query from "@/utils/request/query"
+import type { CreateExecutionResponse, GetExecutionResponse } from "@/types/execution/execution"
 import queryClient from "@/utils/request/queryClient"
-
-interface ExecutionResult {
-    stdout: string
-    stderr: string
-    exitCode: number
-    timedOut: boolean
-    oomKilled: boolean
-    outputLimitHit: boolean
-}
+import useExecution from "@/hooks/useExecution"
 
 export default function Problem() {
     const [code, setCode] = useState('console.log("hello from js")');
     const [language, setLanguage] = useState("javascript");
     const [resultsActiveTab, setResultsActiveTab] = useState<"results" | "testcases" | "console">("results");
+    // const execute = useExecute();
+    // const executeCodeMutation = useMutation<ExecutionResult, Error>({
+    //     mutationKey: ["Problem"],
+    //     mutationFn: async () => {
+    //         // 1. Submit job
+    //         const response = await fetch("/execute", {
+    //             method: "POST",
+    //             headers: { "Content-Type": "application/json" },
+    //             body: JSON.stringify({ code, language }),
+    //         });
 
-    const executeCodeMutation = useMutation<ExecutionResult, Error>({
-        mutationKey: ["Problem"],
-        mutationFn: async () => {
-            // 1. Submit job
-            const response = await fetch("/execute", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code, language }),
-            });
+    //         if (!response.ok) {
+    //             const errorData = await response.json().catch(() => ({}));
+    //             throw new Error(errorData.message || `Server error: ${response.status}`);
+    //         }
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Server error: ${response.status}`);
-            }
+    //         const { jobId } = await response.json();
 
-            const { jobId } = await response.json();
+    //         // 2. Poll for result
+    //         const TIMEOUT_MS = 30_000;
+    //         const started = Date.now();
 
-            // 2. Poll for result
-            const TIMEOUT_MS = 30_000;
-            const started = Date.now();
+    //         return new Promise<ExecutionResult>((resolve, reject) => {
+    //             const interval = setInterval(async () => {
+    //                 if (Date.now() - started > TIMEOUT_MS) {
+    //                     clearInterval(interval);
+    //                     return reject(new Error("Timed out waiting for result"));
+    //                 }
 
-            return new Promise<ExecutionResult>((resolve, reject) => {
-                const interval = setInterval(async () => {
-                    if (Date.now() - started > TIMEOUT_MS) {
-                        clearInterval(interval);
-                        return reject(new Error("Timed out waiting for result"));
-                    }
+    //                 try {
+    //                     const res = await fetch(`/execute/${jobId}`);
+    //                     if (!res.ok) throw new Error(`Poll error: ${res.status}`);
 
-                    try {
-                        const res = await fetch(`/execute/${jobId}`);
-                        if (!res.ok) throw new Error(`Poll error: ${res.status}`);
+    //                     const data = await res.json(); // { state, result, error }
 
-                        const data = await res.json(); // { state, result, error }
+    //                     if (data.state === "completed") {
+    //                         clearInterval(interval);
+    //                         resolve(data.result); // data.result is your ExecutionResult
+    //                     } else if (data.state === "failed") {
+    //                         clearInterval(interval);
+    //                         reject(new Error(data.error || "Execution failed"));
+    //                     }
+    //                     // else: still waiting (active/waiting/delayed), keep polling
+    //                 } catch (err) {
+    //                     clearInterval(interval);
+    //                     reject(err);
+    //                 }
+    //             }, 1000);
+    //         });
+    //     },
 
-                        if (data.state === "completed") {
-                            clearInterval(interval);
-                            resolve(data.result); // data.result is your ExecutionResult
-                        } else if (data.state === "failed") {
-                            clearInterval(interval);
-                            reject(new Error(data.error || "Execution failed"));
-                        }
-                        // else: still waiting (active/waiting/delayed), keep polling
-                    } catch (err) {
-                        clearInterval(interval);
-                        reject(err);
-                    }
-                }, 1000);
-            });
-        },
+    //     onSuccess: (data) => {
+    //         queryClient.invalidateQueries({ queryKey: ["Problems"] });
+    //         setResultsActiveTab("results");
+    //         console.log("Execution Result:", data);
+    //     },
 
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["Problems"] });
-            setResultsActiveTab("results");
-            console.log("Execution Result:", data);
-        },
+    //     onError: (error) => {
+    //         setResultsActiveTab("results");
+    //         console.error(error.message);
+    //     },
+    // });
 
-        onError: (error) => {
-            setResultsActiveTab("results");
-            console.error(error.message);
-        },
-    });
+    // const fetchExecutionResponse = async (jobId: number) =>
+    //     await queryClient.fetchQuery({
+    //         queryKey: ['execution', jobId],
+    //         queryFn: () => query(executionApi.getExecution, {
+    //             pathParams: { jobId }
+    //         }),
+    //     });
 
-    const responseData = executeCodeMutation.data;
+    // const { data: createExecutionResponse, mutate: createExecution, isPending: executionCreating } = useMutation({
+    //     mutationKey: ["Problem", code, language],
+    //     mutationFn: async (variables) => {
+    //         const res = await mutate(executionApi.createExecution)
 
-    const isSuccess = responseData && responseData.exitCode === 0 && !responseData.timedOut && !responseData.oomKilled;
-    const isRuntimeError = responseData && responseData.exitCode !== 0;
+    //         const { jobId } = res;
+
+    //         const TIMEOUT_MS = 30_000;
+    //         const started = Date.now();
+
+    //         return new Promise((resolve, reject) => {
+    //             const interval = setInterval(async () => {
+    //                 if (Date.now() - started > TIMEOUT_MS) {
+    //                     clearInterval(interval);
+    //                     return reject(new Error("Timed out waiting for result"));
+    //                 }
+
+    //                 const getExecutionResponse = await fetchExecutionResponse(parseInt(jobId));
+
+    //                 if (getExecutionResponse.state === "completed") {
+    //                     clearInterval(interval);
+    //                     resolve(getExecutionResponse.state);
+    //                 } else if (getExecutionResponse.state === "failed") {
+    //                     clearInterval(interval);
+    //                     reject(new Error(getExecutionResponse.error || "Execution Error"));
+    //                 }
+    //             }, 1000);
+    //         })
+    //     },
+    //     onSuccess: async (res: CreateExecutionResponse) => {
+
+    //     }
+    // });
+
+    // const { data: executionResponse, isPending: executionFetching, isError, error } = useQuery({
+    //     queryKey: ["GetExecution", createExecutionResponse?.jobId || ""],
+    //     queryFn: query(executionApi.getExecution, {
+    //         pathParams: { jobId: createExecutionResponse?.jobId || "" },
+    //     }),
+    //     enabled: !!createExecutionResponse?.jobId,
+    //     refetchInterval: (query: Query<GetExecutionResponse>): number | false => {
+    //         const state = query.state.data?.state;
+    //         if (state === "completed" || state === "failed") return false;
+    //         return 5000;
+    //     },
+    // });
+
+    const { executionData, error: executionError, execute, loading: executionLoading } = useExecution();
+
+    const responseData = executionData?.result;
+    const isSuccess = executionData && responseData?.exitCode === 0 && !responseData.timedOut && !responseData.oomKilled;
+    const isRuntimeError = responseData && responseData?.exitCode !== 0;
 
     return (
         <div className="h-[calc(100vh-56px)]">
@@ -204,13 +256,13 @@ export default function Problem() {
                                     </div>
 
                                     <Button
-                                        onClick={() => executeCodeMutation.mutate()}
-                                        disabled={executeCodeMutation.isPending}
+                                        onClick={() => execute({ code, language })}
+                                        disabled={executionLoading}
                                         className="rounded-xl gap-2 font-medium"
                                         size="sm"
                                     >
                                         <Play className="h-3.5 w-3.5 fill-current" />
-                                        {executeCodeMutation.isPending ? "Running..." : "Run Code"}
+                                        {executionLoading ? "Running..." : "Run Code"}
                                     </Button>
                                 </div>
 
@@ -242,21 +294,21 @@ export default function Problem() {
 
                                     <div className="flex-1 p-4 overflow-auto">
                                         <TabsContent value="results" className="mt-0 h-full">
-                                            {executeCodeMutation.isPending && (
+                                            {executionLoading && (
                                                 <div className="flex h-full items-center justify-center gap-2 text-muted-foreground text-sm">
                                                     <Clock3 className="h-4 w-4 animate-spin" />
                                                     Executing your solution isolatedly...
                                                 </div>
                                             )}
 
-                                            {executeCodeMutation.isError && (
+                                            {executionError && (
                                                 <div className="flex items-center gap-2 text-destructive border border-destructive/20 bg-destructive/10 p-3 rounded-xl text-sm">
                                                     <AlertCircle className="h-4 w-4" />
-                                                    <span>{executeCodeMutation.error.message}</span>
+                                                    <span>{executionError}</span>
                                                 </div>
                                             )}
 
-                                            {!executeCodeMutation.isPending && responseData && (
+                                            {!executionLoading && responseData && (
                                                 <div className="space-y-4">
                                                     <div className="flex flex-wrap gap-2">
                                                         {isSuccess && (
@@ -306,7 +358,7 @@ export default function Problem() {
                                                 </div>
                                             )}
 
-                                            {!executeCodeMutation.isPending && !responseData && !executeCodeMutation.isError && (
+                                            {!executionLoading && !responseData && !executionError && (
                                                 <div className="flex h-full flex-col items-center justify-center text-muted-foreground text-center p-6">
                                                     <Terminal className="h-8 w-8 mb-2 stroke-[1.5]" />
                                                     <p className="text-sm font-medium">No execution active</p>

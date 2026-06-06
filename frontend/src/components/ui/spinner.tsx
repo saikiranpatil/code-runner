@@ -1,28 +1,54 @@
-interface SpinnerProps {
-  size?: "sm" | "md" | "lg";
-  className?: string;
+import { cn } from '@/lib/utils';
+import React from 'react';
+
+export interface SpinnerProps extends React.ComponentPropsWithoutRef<'span'> {
+  size?: 'sm' | 'md' | 'lg';
+  fullScreen?: boolean;
+  overlayClassName?: string;
 }
 
-const sizes: Record<NonNullable<SpinnerProps["size"]>, string> = {
-  sm: "w-4 h-4 border-2",
-  md: "w-6 h-6 border-2",
-  lg: "w-10 h-10 border-4",
-};
+const sizeMap = {
+  sm: 'h-4 w-4 border-2',
+  md: 'h-6 w-6 border-2',
+  lg: 'h-10 w-10 border-4',
+} as const;
 
-const Spinner = ({ size = "md", className = "" }: SpinnerProps) => {
-  return (
+export const Spinner = ({
+  size = 'md',
+  fullScreen = false,
+  className,
+  overlayClassName,
+  ...props
+}: SpinnerProps) => {
+  const spinnerElement = (
     <span
       role="status"
-      aria-label="Loading"
-      className={`
-        inline-block rounded-full
-        border-current border-t-transparent
-        animate-spin
-        ${sizes[size]}
-        ${className}
-      `}
-    />
+      aria-live="polite"
+      className={cn(
+        'inline-block animate-spin rounded-full border-current border-t-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]',
+        sizeMap[size],
+        className
+      )}
+      {...props}
+    >
+      <span className="sr-only">Loading...</span>
+    </span>
   );
+
+  if (fullScreen) {
+    return (
+      <div 
+        className={cn(
+          "fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm",
+          overlayClassName
+        )}
+      >
+        {spinnerElement}
+      </div>
+    );
+  }
+
+  return spinnerElement;
 };
 
-export default Spinner;
+Spinner.displayName = 'Spinner';

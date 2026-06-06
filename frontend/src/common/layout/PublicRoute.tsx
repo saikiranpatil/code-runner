@@ -1,11 +1,11 @@
 import { Outlet } from "react-router-dom";
-import Spinner from "@/components/ui/spinner";
 import { useAuthStore } from "@/store/auth.store";
+import { Spinner } from "@/components/ui/spinner";
 
 const PublicRoute = () => {
   const { status } = useAuthStore();
 
-  if (status === "loading") return <Spinner />;
+  if (status === "idle" || status === "loading") return <Spinner fullScreen size="lg" />;
   return <Outlet />;
 };
 
