@@ -6,11 +6,11 @@ import type {
 } from "./execution";
 
 export default {
-  createExecution: defineRoute<CreateExecutionResponse, CreateExecutionRequest>({
+  post: defineRoute<CreateExecutionResponse, CreateExecutionRequest>({
     path: "/execution",
     method: "POST",
   }),
-  getExecution: defineRoute<GetExecutionResponse>({
+  get: defineRoute<GetExecutionResponse>({
     path: "/execution/:jobId",
     method: "GET",
   }),
