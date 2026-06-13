@@ -9,6 +9,134 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  DRAFT
+}
+
+enum SubmissionVerdict {
+  ACCEPTED
+  WRONG_ANSWER
+  TIME_LIMIT_EXCEEDED
+  MEMORY_LIMIT_EXCEEDED
+  RUNTIME_ERROR
+  COMPILATION_ERROR
+  INTERNAL_ERROR
+}
+
+enum Language {
+  javascript
+  typescript
+  python
+  cpp
+  java
+}
+
+model Problem {
+  id            String       @id @default(cuid())
+  title         String
+  slug          String       @unique
+  description   String
+  constraints   String?
+  inputFormat   String?
+  outputFormat  String?
+  difficulty    Difficulty   @default(MEDIUM)
+  tags          String[]     @default([])
+  timeLimitMs   Int          @default(2000)
+  memoryLimitMb Int          @default(256)
+  visibility    Visibility   @default(DRAFT)
+
+  /// JSON array of { input, output, explanation? } shown to users (non-hidden)
+  examples      Json         @default("[]")
+
+  testCases     TestCase[]
+  submissions   Submission[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([slug])
+  @@index([difficulty])
+  @@index([visibility])
+  @@index([difficulty, visibility]) // used by the list-problems query
+}
+
+model TestCase {
+  id             String       @id @default(cuid())
+  problemId      String
+  problem        Problem      @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  input          String       @db.Text
+  expectedOutput String       @db.Text
+
+  /// Hidden test cases are not shown to users in the UI
+  isHidden       Boolean      @default(false)
+
+  /// Display order within a problem (0-based)
+  position       Int          @default(0)
+
+  testCaseResults TestCaseResult[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([problemId])
+  @@index([problemId, position])
+}
+
+model Submission {
+  id              String            @id @default(cuid())
+
+  problemId       String
+  problem         Problem           @relation(fields: [problemId], references: [id])
+
+    // NEW
+  userId          Int
+  user            User              @relation(fields: [userId], references: [id])
+
+  language        Language
+  sourceCode      String            @db.Text
+
+  verdict         SubmissionVerdict @default(INTERNAL_ERROR)
+  passedCount     Int               @default(0)
+  totalCount      Int               @default(0)
+  executionTimeMs Int               @default(0)
+
+  testCaseResults TestCaseResult[]
+
+  createdAt       DateTime          @default(now())
+
+  @@index([problemId])
+  @@index([userId])
+  @@index([verdict])
+  @@index([problemId, createdAt])
+}
+
+model TestCaseResult {
+  id              String            @id @default(cuid())
+  submissionId    String
+  submission      Submission        @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  testCaseId      String
+  testCase        TestCase          @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  verdict         SubmissionVerdict
+  executionTimeMs Int
+  memoryUsedMb    Float?
+  stdout          String?           @db.Text
+  stderr          String?           @db.Text
+
+  @@index([submissionId])
+  @@index([testCaseId])
+}
+
 model User {
   id               Int     @id @default(autoincrement())
   email            String  @unique
@@ -20,4 +148,6 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  submissions      Submission[]
 }

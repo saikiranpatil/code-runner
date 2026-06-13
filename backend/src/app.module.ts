@@ -10,6 +10,8 @@ import { ShutdownModule } from './shutdown/shutdown.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import AuthGuardProvider from './modules/auth/auth.provider';
+import { ExecutionModule } from './modules/execution/execution.module';
+import { ProblemsModule } from './modules/problems/problems.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import AuthGuardProvider from './modules/auth/auth.provider';
     PrismaModule,
     AuthModule,
     UsersModule,
+    ExecutionModule,
+    ProblemsModule,
   ],
   controllers: [
     AppController,
