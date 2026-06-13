@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
-import { QUEUE_NAMES } from '../common/constants';
-import { loggerConfig, redisConfig } from '../config';
 import { ExecutorProcessor } from './execution.processor';
 import { ExecutorService } from './executor.service';
+import { loggerConfig, redisConfig } from '../../config';
+import { QUEUE_NAMES } from '../../common/constants';
 
 @Module({
   imports: [

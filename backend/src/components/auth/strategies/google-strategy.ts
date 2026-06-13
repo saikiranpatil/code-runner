@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { envConfig } from '../../config';
-import { STRATEGY_NAME } from '../../common/constants';
+import { envConfig } from '../../../config';
+import { STRATEGY_NAME } from '../../../common/constants';
 import { UsersService } from '../../users/users.service';
 import { Strategy, Profile } from 'passport-google-oauth20';
 

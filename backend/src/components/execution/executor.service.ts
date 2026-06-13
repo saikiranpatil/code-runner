@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { envConfig, LANGUAGES } from '../config';
 import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
+import { envConfig, LANGUAGES } from '../../config';
 
 export interface ExecutionResult {
   stdout: string;

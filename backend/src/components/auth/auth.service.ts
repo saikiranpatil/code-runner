@@ -7,11 +7,11 @@ import {
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcrypt';
-import { User } from '../prisma/generated/client';
-import { jwtRefreshConfig } from '../config/jwt.config';
-import { JwtPayload, JwtRefreshPayload } from '../common/types';
+import { User } from '../../prisma/generated/client';
 import { RegisterDto } from './dto/register.dto';
-import { BCRYPT_ROUNDS } from '../common/constants';
+import { jwtRefreshConfig } from '../../config/jwt.config';
+import { BCRYPT_ROUNDS } from '../../common/constants';
+import { JwtPayload, JwtRefreshPayload } from './auth.types';
 
 export type SafeUser = Omit<User, 'passwordHash' | 'refreshTokenHash'>;
 

@@ -5,11 +5,11 @@ import {
     OnWorkerEvent,
 } from '@nestjs/bullmq';
 
-import { QUEUE_NAMES } from '../common/constants';
-import { envConfig } from '../config';
 import { ExecutionDto } from './dto/execution.dto';
 import { Logger } from 'nestjs-pino';
 import { ExecutorService } from './executor.service';
+import { envConfig } from '../../config';
+import { QUEUE_NAMES } from '../../common/constants';
 
 @Processor(QUEUE_NAMES.EXECUTION, { concurrency: envConfig.worker.concurrency })
 export class ExecutorProcessor extends WorkerHost {

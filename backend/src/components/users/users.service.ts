@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, User } from '../prisma/generated/client';
 import { hash } from 'bcrypt';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { randomBytes } from 'crypto';
-import { BCRYPT_ROUNDS } from '../common/constants';
 import { email } from 'zod';
+import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma, User } from '../../prisma/generated/client';
+import { BCRYPT_ROUNDS } from '../../common/constants';
 
 @Injectable()
 export class UsersService {

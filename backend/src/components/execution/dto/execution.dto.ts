@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
-import { IsSupportedLanguage } from "../../validators/is-supported-language.validator";
+import { IsSupportedLanguage } from "../../../validators/is-supported-language.validator";
 
 export class ExecutionDto {
     @IsString()

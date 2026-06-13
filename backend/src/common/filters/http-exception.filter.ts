@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Prisma } from './prisma/generated/client';
+import { Prisma } from '../../prisma/generated/client';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -26,11 +26,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
         typeof raw === 'string'
           ? { message: raw, errors: [] }
           : {
-              message: (raw as any).message ?? exception.message,
-              errors: Array.isArray((raw as any).error)
-                ? (raw as any).error
-                : [],
-            };
+            message: (raw as any).message ?? exception.message,
+            errors: Array.isArray((raw as any).error)
+              ? (raw as any).error
+              : [],
+          };
 
       return response.status(status).json({
         success: false,

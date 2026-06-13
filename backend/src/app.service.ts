@@ -2,8 +2,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from './common/constants';
-import { ExecutionDto } from './execution/dto/execution.dto';
 import { Logger } from 'nestjs-pino';
+import { ExecutionDto } from './components/execution/dto/execution.dto';
 
 @Injectable()
 export class AppService {

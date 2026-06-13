@@ -5,11 +5,11 @@ import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
 import { QUEUE_NAMES } from './common/constants';
 import { loggerConfig } from './config';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ShutdownModule } from './shutdown/shutdown.module';
-import AuthGuardProvider from './auth/auth.provider';
+import { AuthModule } from './components/auth/auth.module';
+import { UsersModule } from './components/users/users.module';
+import AuthGuardProvider from './components/auth/auth.provider';
 
 @Module({
   imports: [

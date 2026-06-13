@@ -17,10 +17,10 @@ import { LocalAuthGuard } from './guards/local.guard';
 import { GithubAuthGuard } from './guards/github.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { GoogleAuthGuard } from './guards/google.guard';
-import { envConfig } from '../config';
-import { COOKIE_NAME, NODE_ENVS } from '../common/constants';
-import { User } from '../prisma/generated/client';
 import { RegisterDto } from './dto/register.dto';
+import { User } from '../../prisma/generated/client';
+import { COOKIE_NAME, NODE_ENVS } from '../../common/constants';
+import { envConfig } from '../../config';
 
 @Controller('auth')
 export class AuthController {

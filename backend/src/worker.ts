@@ -1,5 +1,5 @@
 import { Logger } from 'nestjs-pino';
-import { ExecutionModule } from './execution/execution.module';
+import { ExecutionModule } from './components/execution/execution.module';
 import { NestFactory } from '@nestjs/core';
 import { envConfig } from './config';
 
