@@ -7,9 +7,9 @@ import { QUEUE_NAMES } from './common/constants';
 import { loggerConfig } from './config';
 import { PrismaModule } from './prisma/prisma.module';
 import { ShutdownModule } from './shutdown/shutdown.module';
-import { AuthModule } from './components/auth/auth.module';
-import { UsersModule } from './components/users/users.module';
-import AuthGuardProvider from './components/auth/auth.provider';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import AuthGuardProvider from './modules/auth/auth.provider';
 
 @Module({
   imports: [

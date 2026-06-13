@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ExecutionDto } from './components/execution/dto/execution.dto';
+import { ExecutionDto } from './modules/execution/dto/execution.dto';
 
 @Controller()
 export class AppController {
