@@ -1,6 +1,3 @@
-// Response envelope
-// Every backend response is wrapped by ResponseTransformInterceptor (2xx)
-// or HttpExceptionFilter (errors).
 export interface ApiResponse<T = unknown> {
   success: true;
   message: string;

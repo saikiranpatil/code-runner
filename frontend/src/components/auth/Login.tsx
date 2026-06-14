@@ -16,9 +16,9 @@ import { URLs } from '@/common/urls';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/auth.store';
 import AuthFormLayout from '@/components/auth/AuthFormLayout';
-import authApi from '@/types/auth/authApi';
+import authApi from '@/api/auth/authApi';
 import mutate from '@/utils/request/mutate';
-import type { LoginResponse } from '@/types/auth/auth';
+import type { LoginResponse } from '@/api/auth/auth';
 import { toast } from 'sonner';
 import queryClient from '@/utils/request/queryClient';
 

@@ -7,14 +7,50 @@ export const NODE_ENVS = {
     DEVELOPMENT: 'DEVELOPMENT',
 }
 
-export const LANGUAGES = [
-    { label: 'JavaScript', value: 'javascript' },
-    { label: 'TypeScript', value: 'typescript' },
-    { label: 'Python', value: 'python' },
-    { label: 'Ruby', value: 'ruby' },
-    { label: 'PHP', value: 'php' },
-    { label: 'C++', value: 'cpp' },
-    { label: 'C', value: 'c' },
-]
+export type Language = "javascript" | "typescript" | "python" | "cpp" | "java"
 
-export type Language = (typeof LANGUAGES)[number]['value'];
+export const LANGUAGES: { label: string; value: Language, defaultCode: string }[] = [
+    {
+        label: "JavaScript",
+        value: "javascript",
+        defaultCode: `function main() {
+    // Your code here
+}
+
+main();` },
+    {
+        label: "TypeScript",
+        value: "typescript",
+        defaultCode: `function main(): void {
+    // Your code here
+}
+
+main();` },
+    {
+        label: "Python",
+        value: "python",
+        defaultCode: `def main():
+    # Your code here
+
+if __name__ == "__main__":
+    main()` },
+    {
+        label: "C++",
+        value: "cpp",
+        defaultCode: `#include <iostream>
+using namespace std;
+
+int main() {
+    // Your code here
+    return 0;
+}`,
+    },
+    {
+        label: "Java",
+        value: "java",
+        defaultCode: `public class Main {
+    public static void main(String[] args) {
+        // Your code here
+    }
+}` },
+];

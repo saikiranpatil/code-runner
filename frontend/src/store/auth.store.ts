@@ -1,5 +1,5 @@
-import type { User } from '@/types/auth/auth';
-import authApi from '@/types/auth/authApi';
+import type { User } from '@/api/auth/auth';
+import authApi from '@/api/auth/authApi';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 

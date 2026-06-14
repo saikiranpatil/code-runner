@@ -1,5 +1,5 @@
-import type { CreateExecutionRequest, CreateExecutionResponse, GetExecutionResponse } from "@/types/execution/execution";
-import executionApi from "@/types/execution/executionApi";
+import type { CreateExecutionRequest, CreateExecutionResponse, GetExecutionResponse } from "@/api/execution/execution";
+import executionApi from "@/api/execution/executionApi";
 import mutate from "@/utils/request/mutate";
 import query from "@/utils/request/query";
 import { Query, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

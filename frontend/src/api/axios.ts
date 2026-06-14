@@ -6,8 +6,8 @@ import type {
 } from 'axios';
 import type { ApiResponse } from '@/api/types';
 import { getAuthState } from '@/store/auth.store';
-import authApi from '@/types/auth/authApi';
-import type { RefreshResponse } from '@/types/auth/auth';
+import authApi from '@/api/auth/authApi';
+import type { RefreshResponse } from '@/api/auth/auth';
 
 // Queue for requests that arrive while a token refresh is in flight
 interface QueueEntry {

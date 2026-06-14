@@ -17,7 +17,7 @@ import { Prisma } from '../../prisma/generated/client';
 export class ProblemsService {
   private readonly logger = new Logger(ProblemsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateProblemDto): Promise<ProblemEntity> {
     const existing = await this.prisma.problem.findUnique({
@@ -46,7 +46,7 @@ export class ProblemsService {
           timeLimitMs: dto.timeLimitMs ?? 2000,
           memoryLimitMb: dto.memoryLimitMb ?? 256,
           visibility: dto.visibility,
-          examples: (dto.examples ?? [])  as unknown as Prisma.InputJsonValue,
+          examples: (dto.examples ?? []) as unknown as Prisma.InputJsonValue,
           testCases: {
             create: dto.testCases.map((tc) => ({
               input: tc.input,
@@ -148,7 +148,13 @@ export class ProblemsService {
   async findWithTestCases(id: string) {
     const problem = await this.prisma.problem.findUnique({
       where: { id },
-      include: { testCases: true },
+      include: {
+        testCases: {
+          where: {
+            isHidden: false
+          }
+        }
+      },
     });
 
     if (!problem) {
@@ -178,7 +184,6 @@ export class ProblemsService {
         problemId: tc.problemId,
         input: tc.input,
         expectedOutput: tc.expectedOutput,
-        isHidden: tc.isHidden,
         createdAt: tc.createdAt,
       })),
       createdAt: problem.createdAt,

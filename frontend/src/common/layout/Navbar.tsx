@@ -6,8 +6,8 @@ import {
     AvatarImage
 } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/auth.store";
-import type { LogoutResponse } from "@/types/auth/auth";
-import authApi from "@/types/auth/authApi";
+import type { LogoutResponse } from "@/api/auth/auth";
+import authApi from "@/api/auth/authApi";
 import mutate from "@/utils/request/mutate";
 import { useMutation } from "@tanstack/react-query";
 import { Code2, LogOutIcon, Moon, Sun, User as UserIcon } from "lucide-react";

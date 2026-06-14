@@ -1,4 +1,4 @@
-import type { User } from "@/types/auth/auth";
+import type { User } from "@/api/auth/auth";
 
 export type AuthProvider = 'github' | 'google';
 

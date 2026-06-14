@@ -17,8 +17,8 @@ import AuthFormLayout from '@/components/auth/AuthFormLayout';
 import { useAuthStore } from '../../store/auth.store';
 import { z } from 'zod'
 import mutate from '@/utils/request/mutate';
-import authApi from '@/types/auth/authApi';
-import type { RegisterResponse } from '@/types/auth/auth';
+import authApi from '@/api/auth/authApi';
+import type { RegisterResponse } from '@/api/auth/auth';
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },

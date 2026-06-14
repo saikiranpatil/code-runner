@@ -3,11 +3,12 @@ import ProtectedRoute from '@/common/layout/ProtectedRoute';
 import PublicRoute from '@/common/layout/PublicRoute';
 import Login from '@/components/auth/Login';
 import Register from '@/components/auth/Register';
-import Problem from '@/components/problems/Problem';
 import NotFoundPage from '@/pages/NotFoundPage';
 import OAuthCallback from '@/pages/OAuthCallback';
 import { URLs } from '@/common/urls';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import ProblemsPage from '@/components/problems/Problems';
+import ProblemDescription from '@/components/problems/ProblemDetails';
 
 function AppLayout() {
     return (
@@ -32,8 +33,9 @@ export default function AppRouter() {
 
             <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
-                    <Route path={URLs.home} element={<Navigate to={URLs.problems.details} replace />} />
-                    <Route path={URLs.problems.details} element={<Problem />} />
+                    <Route path={URLs.home} element={<Navigate to={URLs.problems.list} replace />} />
+                    <Route path={URLs.problems.list} element={<ProblemsPage />} />
+                    <Route path={URLs.problems.details} element={<ProblemDescription />} />
                 </Route>
             </Route>
 
