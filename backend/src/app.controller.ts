@@ -16,11 +16,6 @@ export class AppController {
     return req.user;
   }
 
-  @Post("execution")
-  handleExecute(@Body() createExecutionDto: ExecutionDto) {
-    return this.appService.handleExecute(createExecutionDto);
-  }
-
   @Get('execution/:jobId')
   getResult(@Param('jobId') jobId: string) {
     return this.appService.getResult(jobId);

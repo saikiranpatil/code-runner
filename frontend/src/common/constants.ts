@@ -48,7 +48,7 @@ int main() {
     {
         label: "Java",
         value: "java",
-        defaultCode: `public class Main {
+        defaultCode: `public class Solution {
     public static void main(String[] args) {
         // Your code here
     }

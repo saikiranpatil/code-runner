@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react"
+import { useMemo, useState, type JSX } from "react"
 import {
     BookOpen,
     History,
@@ -24,9 +24,16 @@ import ProblemDescription from "@/components/problems/ProblemDetails/ProblemDesc
 import SubmissionsTab from "@/components/problems/ProblemDetails/SubmisionsTab"
 import EditorToolbar from "@/components/problems/ProblemDetails/EditorToolbar"
 import OutputPanel from "@/components/problems/ProblemDetails/OutputPanel"
-import type { ExecResult, ExecStatus } from "@/api/execution/execution"
+import type { ExecutionRequest } from "@/api/execution/execution"
 import { useParams } from "react-router-dom"
 import NotFoundPage from "@/pages/NotFoundPage"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import mutate from "@/utils/request/mutate"
+import executionApi from "@/api/execution/executionApi"
+import query from "@/utils/request/query"
+import problemApi from "@/api/problem/problemApi"
+import { Spinner } from "@/components/ui/spinner"
+import type { ExecStatus } from "../Problems"
 
 export default function ProblemDetail(): JSX.Element {
     const { slug } = useParams();
@@ -37,11 +44,15 @@ export default function ProblemDetail(): JSX.Element {
 
     const [language, setLanguage] = useState<Language>("javascript");
     const [code, setCode] = useState<string>(getDefaultCode(language));
-    const [customInput, setCustomInput] = useState<string>("")
+    const [customInput, setCustomInput] = useState<string>("");
 
-    const [execStatus, setExecStatus] = useState<ExecStatus>("idle")
-    const [result, setResult] = useState<ExecResult | null>(null)
+    const [execStatus, setExecStatus] = useState<ExecStatus>("idle");
 
+    const { data: problem, isLoading: isProblemLoading } = useQuery({
+        queryKey: ["GetProblemDetails", slug],
+        queryFn: query(problemApi.findBySlug, { pathParams: { slug: slug! } }),
+        enabled: !!slug,
+    });
 
     const handleLanguageChange = (lang: Language): void => {
         setLanguage(lang)
@@ -52,42 +63,36 @@ export default function ProblemDetail(): JSX.Element {
         setCode(getDefaultCode(language));
     }
 
+    const submissionPayload: ExecutionRequest = useMemo(() => ({
+        language: language,
+        problemId: problem?.id!,
+        sourceCode: code,
+    }), [language, problem, code]);
+
+    const { data: submissionResponse, mutate: createSubmission } = useMutation({
+        mutationKey: ["submitCode", "runCode", slug],
+        mutationFn: mutate(executionApi.create, { body: submissionPayload }),
+        onSuccess: () => {
+            setExecStatus("done");
+        }
+    });
+
     const handleRun = (): void => {
         setExecStatus("running")
-        // Simulate for demo — replace with useExecution / useMutation
-        setTimeout(() => {
-            setResult({
-                state: "completed",
-                exitCode: 0,
-                timedOut: false,
-                oomKilled: false,
-                outputLimitHit: false,
-                stdout: "[0, 1]",
-                stderr: "",
-            })
-            setExecStatus("done")
-        }, 1800)
+        createSubmission(submissionPayload);
     }
 
     const handleSubmit = (): void => {
         setExecStatus("submitting")
-        setTimeout(() => {
-            setResult({
-                state: "completed",
-                verdict: "ACCEPTED",
-                exitCode: 0,
-                timedOut: false,
-                oomKilled: false,
-                outputLimitHit: false,
-                stdout: "[0, 1]",
-                stderr: "",
-            })
-            setExecStatus("done")
-        }, 2500)
+        createSubmission(submissionPayload);
     }
 
-    if (!slug) {
+    if (!slug || !problem) {
         return <NotFoundPage />
+    }
+
+    if (isProblemLoading) {
+        return <Spinner fullScreen size="lg" />;
     }
 
     return (
@@ -116,7 +121,7 @@ export default function ProblemDetail(): JSX.Element {
 
                         <TabsContent value="description" className="min-h-0 flex-1 overflow-hidden mt-0">
                             <ScrollArea className="h-full">
-                                <ProblemDescription />
+                                <ProblemDescription problem={problem} />
                             </ScrollArea>
                         </TabsContent>
 
@@ -163,7 +168,7 @@ export default function ProblemDetail(): JSX.Element {
                         <ResizablePanel defaultSize={38} minSize={18}>
                             <OutputPanel
                                 status={execStatus}
-                                result={result}
+                                result={submissionResponse?? null}
                                 customInput={customInput}
                                 onCustomInputChange={setCustomInput}
                             />

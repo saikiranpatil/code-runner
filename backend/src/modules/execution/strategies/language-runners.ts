@@ -87,7 +87,7 @@ export class CppStrategy implements LanguageStrategy {
 @Injectable()
 export class JavaStrategy implements LanguageStrategy {
   readonly language = SupportedLanguage.JAVA;
-  readonly dockerImage = 'openjdk:21-slim';
+  readonly dockerImage = 'eclipse-temurin:21-jdk';
   readonly sourceFileName = 'Solution.java';
 
   getCompileCommand(): string {

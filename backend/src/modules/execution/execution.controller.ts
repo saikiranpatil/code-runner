@@ -11,7 +11,7 @@ import { JudgeResult } from './execution.types';
 import { SubmitCodeDto } from './dto/submit-code.dto';
 import { ExecutionService } from './execution.service';
 
-@Controller('submissions')
+@Controller('execution')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class ExecutionController {
   constructor(private readonly executionService: ExecutionService) {}

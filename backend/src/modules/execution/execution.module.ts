@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
-import { ExecutorProcessor } from './execution.processor';
-import { ExecutorService } from './executor.service';
 import { loggerConfig, redisConfig } from '../../config';
 import { QUEUE_NAMES } from '../../common/constants';
 import { PrismaModule } from '../../prisma/prisma.module';
@@ -36,9 +34,6 @@ import { LANGUAGE_STRATEGIES } from './strategies/language-strategy.interface';
     ExecutionController,
   ],
   providers: [
-    ExecutorProcessor,
-    ExecutorService,
-
     ExecutionService,
     DockerExecutionService,
     OutputEvaluator,

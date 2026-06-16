@@ -36,25 +36,8 @@ const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     NONE: { label: "-", className: "text-red-500 bg-red-500/10 border-red-500/20", Icon: MdBlock },
 }
 
-export default function ProblemDescription(): JSX.Element {
-    const { slug } = useParams();
-
-    const { data: problem, isLoading } = useQuery({
-        queryKey: ["GetProblemDetails", slug],
-        queryFn: query(problemApi.findBySlug, { pathParams: { slug: slug! } }),
-        enabled: !!slug,
-    });
-
+export default function ProblemDescription({ problem }: { problem: ProblemEntity }): JSX.Element {
     const diff = DIFFICULTY_CONFIG[problem?.difficulty ?? "EASY"];
-
-    if (isLoading) {
-        return <Spinner fullScreen size="lg" />;
-    }
-
-    if (!problem) {
-        return <NotFoundPage />
-    }
-
     return (
         <div className="space-y-6 p-5 text-sm">
             <div className="space-y-2.5">

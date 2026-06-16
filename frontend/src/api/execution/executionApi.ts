@@ -1,17 +1,9 @@
 import { defineRoute } from "@/utils/request/types";
-import type {
-  CreateExecutionRequest,
-  CreateExecutionResponse,
-  GetExecutionResponse,
-} from "./execution";
+import type { ExecutionResponse, ExecutionRequest } from "./execution";
 
 export default {
-  post: defineRoute<CreateExecutionResponse, CreateExecutionRequest>({
+  create: defineRoute<ExecutionResponse, ExecutionRequest>({
     path: "/execution",
     method: "POST",
   }),
-  get: defineRoute<GetExecutionResponse>({
-    path: "/execution/:jobId",
-    method: "GET",
-  }),
-} as const;
+}
