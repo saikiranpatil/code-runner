@@ -61,11 +61,11 @@ export default function ProblemDescription({ problem }: { problem: ProblemEntity
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                        {/* {problem.acceptance}% acceptance */}
+                        {problem.acceptanceRate}% acceptance
                     </span>
                     <span className="flex items-center gap-1">
                         <Hash className="h-3 w-3" />
-                        {/* {(problem.totalSubmissions / 1_000_000).toFixed(1)}M submissions */}
+                        {problem.totalSubmissions} submissions
                     </span>
                 </div>
             </div>

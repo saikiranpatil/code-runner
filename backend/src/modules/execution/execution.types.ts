@@ -43,12 +43,30 @@ export interface TestCaseResult {
   stderr?: string;
 }
 
+export interface RunTestCaseResult {
+  testCaseId: string;
+  input: string;
+  expectedOutput: string;
+  verdict: SubmissionVerdict;
+  executionTimeMs: number;
+  stdout?: string;
+  stderr?: string;
+}
+
+export interface RunResult {
+  verdict: SubmissionVerdict;
+  passedCount: number;
+  totalCount: number;
+  testCaseResults: RunTestCaseResult[];
+}
+
 export interface JudgeResult {
+  submissionId: string;
   verdict: SubmissionVerdict;
   passedCount: number;
   totalCount: number;
   executionTimeMs: number;
-  testCaseResults: TestCaseResult[];
+  testCaseResults: TestCaseResult[]; // Only first failed (empty if all passed)
 }
 
 export interface ExecutionOptions {

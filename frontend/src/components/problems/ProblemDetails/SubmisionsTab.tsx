@@ -1,44 +1,76 @@
 import type { JSX } from "react"
-
-import { Clock3, MemoryStick } from "lucide-react"
-
+import { Clock3, FileX } from "lucide-react"
 import type { SubmissionEntity } from "@/api/problem/problem"
 import VerdictBadge from "@/components/problems/ProblemDetails/components/VerdictBadge"
 import { Separator } from "@/components/ui/separator"
+import { useQuery } from "@tanstack/react-query"
+import query from "@/utils/request/query"
+import problemApi from "@/api/problem/problemApi"
+import { Spinner } from "@/components/ui/spinner"
 
-interface SubmissionListItem
-    extends Pick<SubmissionEntity, "id" | "verdict" | "language"> {
-    runtime: string
-    memory: string
-    time: string
+interface SubmissionsTabProps {
+    problemId: string
 }
 
-const DUMMY_SUBMISSIONS: SubmissionListItem[] = [
-    { id: "1", verdict: "ACCEPTED", language: "javascript", runtime: "72ms", memory: "42.3MB", time: "2 hours ago" },
-    { id: "2", verdict: "WRONG_ANSWER", language: "javascript", runtime: "—", memory: "—", time: "3 hours ago" },
-    { id: "3", verdict: "TIME_LIMIT_EXCEEDED", language: "python", runtime: "—", memory: "—", time: "1 day ago" },
-]
+export default function SubmissionsTab({ problemId }: SubmissionsTabProps): JSX.Element {
+    const { data: submissions, isLoading } = useQuery({
+        queryKey: ["GetSubmissions", problemId],
+        queryFn: query(problemApi.getSubmissions, { pathParams: { id: problemId } }),
+        enabled: !!problemId,
+    });
 
-export default function SubmissionsTab(): JSX.Element {
+    if (isLoading) {
+        return (
+            <div className="flex h-48 items-center justify-center">
+                <Spinner size="md" />
+            </div>
+        )
+    }
+
+    if (!submissions || submissions.length === 0) {
+        return (
+            <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
+                <FileX className="h-8 w-8 opacity-40" />
+                <p className="text-sm">No submissions yet</p>
+            </div>
+        )
+    }
+
     return (
-        <div className="space-y-2 p-4">
-            {DUMMY_SUBMISSIONS.map((sub) => (
-                <div
-                    key={sub.id}
-                    className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 text-xs transition-colors hover:bg-muted/40"
-                >
-                    <VerdictBadge verdict={sub.verdict} />
-                    <span className="text-muted-foreground">{sub.language}</span>
-                    <Separator orientation="vertical" className="h-3.5" />
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                        <Clock3 className="h-3 w-3" /> {sub.runtime}
-                    </span>
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                        <MemoryStick className="h-3 w-3" /> {sub.memory}
-                    </span>
-                    <span className="ml-auto text-muted-foreground/60">{sub.time}</span>
+        <div className="flex flex-col">
+            {submissions.map((submission, i) => (
+                <div key={submission.id}>
+                    {i > 0 && <Separator />}
+                    <SubmissionRow submission={submission} />
                 </div>
             ))}
+        </div>
+    )
+}
+
+function SubmissionRow({ submission }: { submission: SubmissionEntity }): JSX.Element {
+    const date = new Date(submission.createdAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    })
+
+    return (
+        <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-muted/40">
+            <div className="flex items-center gap-3">
+                <VerdictBadge verdict={submission.verdict} />
+                <span className="capitalize text-muted-foreground">{submission.language}</span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span>
+                    {submission.passedCount}/{submission.totalCount} passed
+                </span>
+                <span className="flex items-center gap-1">
+                    <Clock3 className="h-3 w-3" />
+                    {submission.executionTimeMs} ms
+                </span>
+                <span>{date}</span>
+            </div>
         </div>
     )
 }

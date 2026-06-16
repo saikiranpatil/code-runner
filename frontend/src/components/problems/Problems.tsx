@@ -55,8 +55,6 @@ const SORT_OPTIONS: SortOption[] = [
 
 const PER_PAGE = 15
 
-// ─── Dummy data ────────────────────────────────────────────────────────────────
-
 export type Difficulty = "EASY" | "MEDIUM" | "HARD"
 export type Visibility = "PUBLIC" | "PRIVATE" | "DRAFT"
 export type SupportedLanguage = "javascript" | "typescript" | "python" | "cpp" | "java"

@@ -2,92 +2,159 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   ExecutionResult,
   JudgeResult,
+  RunResult,
+  RunTestCaseResult,
   SubmissionVerdict,
-  SupportedLanguage,
   TestCaseResult,
 } from './execution.types';
 import { ProblemsService } from '../problems/problems.service';
 import { DockerExecutionService } from './docker-execution.service';
 import { SubmitCodeDto } from './dto/submit-code.dto';
+import { RunCodeDto } from './dto/run-code.dto';
 import { OutputEvaluator } from './helper/output-evaluator';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class ExecutionService {
   private readonly logger = new Logger(ExecutionService.name);
 
   constructor(
-    private readonly dockerExecution: DockerExecutionService,
     private readonly problemsService: ProblemsService,
+    private readonly dockerExecutionService: DockerExecutionService,
     private readonly outputEvaluator: OutputEvaluator,
+    private readonly prisma: PrismaService,
   ) {}
 
-  async judge(dto: SubmitCodeDto): Promise<JudgeResult> {
-    const { problemId, language, sourceCode } = dto;
+  async run(dto: RunCodeDto, _userId: number): Promise<RunResult> {
+    const problem = await this.problemsService.findWithTestCases(dto.problemId);
+    const testCases = (problem.testCases as any[]).filter((tc) => !tc.isHidden);
 
-    this.logger.log(
-      `Judging submission — problem: ${problemId}, language: ${language}`,
-    );
-
-    // 1. Load problem and test cases
-    const problem = await this.problemsService.findWithTestCases(problemId);
-
-    const testCaseResults: TestCaseResult[] = [];
-    let overallVerdict = SubmissionVerdict.ACCEPTED;
+    const testCaseResults: RunTestCaseResult[] = [];
     let passedCount = 0;
-    let totalExecutionTimeMs = 0;
+    let overallVerdict = SubmissionVerdict.ACCEPTED;
 
-    // 2. Execute against each test case sequentially
-    for (const testCase of problem.testCases) {
-      const result = await this.dockerExecution.execute({
-        language: language as SupportedLanguage,
-        sourceCode,
-        stdin: testCase.input,
+    for (const tc of testCases) {
+      const result = await this.dockerExecutionService.execute({
+        language: dto.language,
+        sourceCode: dto.sourceCode,
+        stdin: tc.input,
         timeLimitMs: problem.timeLimitMs,
         memoryLimitMb: problem.memoryLimitMb,
       });
 
-      totalExecutionTimeMs += result.executionTimeMs;
+      const verdict = this.determineVerdict(result, tc.expectedOutput, problem.timeLimitMs);
 
-      const verdict = this.determineVerdict(
-        result,
-        testCase.expectedOutput,
-        problem.timeLimitMs,
-      );
+      if (verdict === SubmissionVerdict.ACCEPTED) {
+        passedCount++;
+      } else if (overallVerdict === SubmissionVerdict.ACCEPTED) {
+        overallVerdict = verdict;
+      }
 
       testCaseResults.push({
-        testCaseId: testCase.id,
+        testCaseId: tc.id,
+        input: tc.input,
+        expectedOutput: tc.expectedOutput,
         verdict,
+        executionTimeMs: result.executionTimeMs,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      });
+    }
+
+    return {
+      verdict: overallVerdict,
+      passedCount,
+      totalCount: testCases.length,
+      testCaseResults,
+    };
+  }
+
+  async judge(dto: SubmitCodeDto, userId: number): Promise<JudgeResult> {
+    const problem = await this.problemsService.findWithTestCases(dto.problemId);
+    const testCases = problem.testCases as any[];
+
+    let verdict = SubmissionVerdict.ACCEPTED;
+    let passedCount = 0;
+    let maxExecutionTimeMs = 0;
+    let firstFailedResult: TestCaseResult | null = null;
+
+    const dbResults: {
+      testCaseId: string;
+      verdict: string;
+      executionTimeMs: number;
+      memoryUsedMb?: number;
+      stdout?: string;
+      stderr?: string;
+    }[] = [];
+
+    for (const tc of testCases) {
+      const result = await this.dockerExecutionService.execute({
+        language: dto.language,
+        sourceCode: dto.sourceCode,
+        stdin: tc.input,
+        timeLimitMs: problem.timeLimitMs,
+        memoryLimitMb: problem.memoryLimitMb,
+      });
+
+      const tcVerdict = this.determineVerdict(result, tc.expectedOutput, problem.timeLimitMs);
+      maxExecutionTimeMs = Math.max(maxExecutionTimeMs, result.executionTimeMs);
+
+      const tcResult: TestCaseResult = {
+        testCaseId: tc.id,
+        verdict: tcVerdict,
+        executionTimeMs: result.executionTimeMs,
+        memoryUsedMb: result.memoryUsedMb,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      };
+
+      dbResults.push({
+        testCaseId: tc.id,
+        verdict: tcVerdict,
         executionTimeMs: result.executionTimeMs,
         memoryUsedMb: result.memoryUsedMb,
         stdout: result.stdout,
         stderr: result.stderr,
       });
 
-      if (verdict === SubmissionVerdict.ACCEPTED) {
+      if (tcVerdict === SubmissionVerdict.ACCEPTED) {
         passedCount++;
-      } else {
-        // 3. Stop immediately on compilation errors; continue on runtime/WA
-        if (
-          verdict === SubmissionVerdict.COMPILATION_ERROR ||
-          verdict === SubmissionVerdict.INTERNAL_ERROR
-        ) {
-          overallVerdict = verdict;
-          break;
-        }
-
-        // Record the first failing verdict as the overall verdict
-        if (overallVerdict === SubmissionVerdict.ACCEPTED) {
-          overallVerdict = verdict;
-        }
+      } else if (verdict === SubmissionVerdict.ACCEPTED) {
+        verdict = tcVerdict;
+        firstFailedResult = tcResult;
       }
     }
 
+    const submission = await this.prisma.submission.create({
+      data: {
+        problemId: dto.problemId,
+        userId,
+        language: dto.language as any,
+        sourceCode: dto.sourceCode,
+        verdict: verdict as any,
+        passedCount,
+        totalCount: testCases.length,
+        executionTimeMs: maxExecutionTimeMs,
+        testCaseResults: {
+          create: dbResults.map((r) => ({
+            testCaseId: r.testCaseId,
+            verdict: r.verdict as any,
+            executionTimeMs: r.executionTimeMs,
+            memoryUsedMb: r.memoryUsedMb,
+            stdout: r.stdout,
+            stderr: r.stderr,
+          })),
+        },
+      },
+    });
+
     return {
-      verdict: overallVerdict,
+      submissionId: submission.id,
+      verdict,
       passedCount,
-      totalCount: problem.testCases.length,
-      executionTimeMs: totalExecutionTimeMs,
-      testCaseResults,
+      totalCount: testCases.length,
+      executionTimeMs: maxExecutionTimeMs,
+      testCaseResults: firstFailedResult ? [firstFailedResult] : [],
     };
   }
 
@@ -96,42 +163,27 @@ export class ExecutionService {
     expectedOutput: string,
     timeLimitMs: number,
   ): SubmissionVerdict {
-    // Compilation error: exit code 1 with no stdout (heuristic)
-    // The compile phase returns early with stderr populated and stdout empty
-    // when the compiler exits non-zero.
-    if (result.exitCode !== 0 && result.stdout === '' && result.stderr !== '') {
-      // Could be compile error or runtime error — distinguish by stderr content
-      const stderr = result.stderr.toLowerCase();
-      if (
-        stderr.includes('error:') &&
-        (stderr.includes('compile') ||
-          stderr.includes('syntax') ||
-          stderr.includes('undefined') ||
-          stderr.includes('expected') ||
-          stderr.includes('undeclared') ||
-          stderr.includes('cannot find symbol'))
-      ) {
-        return SubmissionVerdict.COMPILATION_ERROR;
-      }
-    }
-
     if (result.timedOut || result.executionTimeMs >= timeLimitMs) {
       return SubmissionVerdict.TIME_LIMIT_EXCEEDED;
     }
-
     if (result.oomKilled) {
       return SubmissionVerdict.MEMORY_LIMIT_EXCEEDED;
     }
-
-    // Non-zero exit with no compile error signals = runtime error
     if (result.exitCode !== 0) {
+      // Could be compile error or runtime error — distinguish by stderr content
+      const stderr = result.stderr?.toLowerCase() ?? '';
+      if (
+        stderr.includes('syntaxerror') ||
+        stderr.includes('error:') ||
+        stderr.includes('compil')
+      ) {
+        return SubmissionVerdict.COMPILATION_ERROR;
+      }
       return SubmissionVerdict.RUNTIME_ERROR;
     }
-
-    if (!this.outputEvaluator.isCorrect(result.stdout, expectedOutput)) {
-      return SubmissionVerdict.WRONG_ANSWER;
+    if (this.outputEvaluator.isCorrect(result.stdout, expectedOutput)) {
+      return SubmissionVerdict.ACCEPTED;
     }
-
-    return SubmissionVerdict.ACCEPTED;
+    return SubmissionVerdict.WRONG_ANSWER;
   }
 }

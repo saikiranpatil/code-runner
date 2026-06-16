@@ -1,24 +1,28 @@
-import { defineRoute } from "@/utils/request/types";
+import { defineRoute } from "@/utils/request/types"
 import type {
   ProblemEntity,
   CreateProblemRequest,
-} from "./problem";
+  PaginatedProblemsResponse,
+  SubmissionEntity,
+} from "./problem"
 
-export default {
-  create: defineRoute<ProblemEntity, CreateProblemRequest>({
-    path: "/problems",
-    method: "POST",
-  }),
-  list: defineRoute<ProblemEntity[]>({
+const problemApi = {
+  list: defineRoute<PaginatedProblemsResponse>({
     path: "/problems",
     method: "GET",
   }),
   findBySlug: defineRoute<ProblemEntity>({
-    path: "/problems/slug/:slug",
+    path: "/problems/:slug",
     method: "GET",
   }),
-  findById: defineRoute<ProblemEntity>({
-    path: "/problems/:id",
+  create: defineRoute<ProblemEntity, CreateProblemRequest>({
+    path: "/problems",
+    method: "POST",
+  }),
+  getSubmissions: defineRoute<SubmissionEntity[]>({
+    path: "/problems/:id/submissions",
     method: "GET",
   }),
-} as const;
+}
+
+export default problemApi

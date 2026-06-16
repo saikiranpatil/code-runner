@@ -1,30 +1,18 @@
-import { useMemo, useState, type JSX } from "react"
-import {
-    BookOpen,
-    History,
-} from "lucide-react"
-
+import { useState, type JSX } from "react"
+import { BookOpen, History } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
-
 import CodeEditor from "@/common/components/code-editor"
-
-import { LANGUAGES, type Language } from "@/common/constants"
+import { type Language } from "@/common/constants"
 import ProblemDescription from "@/components/problems/ProblemDetails/ProblemDescription"
 import SubmissionsTab from "@/components/problems/ProblemDetails/SubmisionsTab"
 import EditorToolbar from "@/components/problems/ProblemDetails/EditorToolbar"
 import OutputPanel from "@/components/problems/ProblemDetails/OutputPanel"
-import type { ExecutionRequest } from "@/api/execution/execution"
 import { useParams } from "react-router-dom"
 import NotFoundPage from "@/pages/NotFoundPage"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -34,148 +22,155 @@ import query from "@/utils/request/query"
 import problemApi from "@/api/problem/problemApi"
 import { Spinner } from "@/components/ui/spinner"
 import type { ExecStatus } from "../Problems"
+import type { RunResult, RunCodeRequest, SubmitResult } from "@/api/execution/execution"
+import queryClient from "@/utils/request/queryClient"
+
+const DEFAULT_CODE: Record<Language, string> = {
+    javascript:
+        "// Read from stdin via process.stdin\nconst lines = require('fs').readFileSync('/dev/stdin','utf8').split('\\n');\n",
+    typescript:
+        "// Read from stdin\nconst lines = require('fs').readFileSync('/dev/stdin','utf8').split('\\n');\n",
+    python: "import sys\nlines = sys.stdin.read().split('\\n')\n",
+    cpp: "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // your code here\n    return 0;\n}\n",
+    java: "import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // your code here\n    }\n}\n",
+}
 
 export default function ProblemDetail(): JSX.Element {
-    const { slug } = useParams();
+    const { slug } = useParams<{ slug: string }>()
 
-    const getDefaultCode = (currentLanguage: Language) => {
-        return LANGUAGES.find(language => language.value === currentLanguage)?.defaultCode ?? "";
-    };
+    const [language, setLanguage] = useState<Language>("javascript")
+    const [code, setCode] = useState<string>(DEFAULT_CODE["javascript"])
+    const [status, setStatus] = useState<ExecStatus>("idle")
+    const [runResult, setRunResult] = useState<RunResult | null>(null)
+    const [judgeResult, setJudgeResult] = useState<SubmitResult | null>(null)
 
-    const [language, setLanguage] = useState<Language>("javascript");
-    const [code, setCode] = useState<string>(getDefaultCode(language));
-    const [customInput, setCustomInput] = useState<string>("");
-
-    const [execStatus, setExecStatus] = useState<ExecStatus>("idle");
-
-    const { data: problem, isLoading: isProblemLoading } = useQuery({
+    const {
+        data: problem,
+        isLoading,
+        isError,
+    } = useQuery({
         queryKey: ["GetProblemDetails", slug],
         queryFn: query(problemApi.findBySlug, { pathParams: { slug: slug! } }),
         enabled: !!slug,
     });
 
-    const handleLanguageChange = (lang: Language): void => {
-        setLanguage(lang)
-        setCode(getDefaultCode(lang))
-    }
+    const runRequestPayload: RunCodeRequest = { language: language, problemId: problem?.id!, sourceCode: code };
 
-    const handleReset = (): void => {
-        setCode(getDefaultCode(language));
-    }
-
-    const submissionPayload: ExecutionRequest = useMemo(() => ({
-        language: language,
-        problemId: problem?.id!,
-        sourceCode: code,
-    }), [language, problem, code]);
-
-    const { data: submissionResponse, mutate: createSubmission } = useMutation({
-        mutationKey: ["submitCode", "runCode", slug],
-        mutationFn: mutate(executionApi.create, { body: submissionPayload }),
-        onSuccess: () => {
-            setExecStatus("done");
-        }
+    const { mutate: runCode, isPending: isRunning } = useMutation({
+        mutationFn: mutate(executionApi.run, { body: runRequestPayload }),
+        onMutate: () => {
+            setStatus("running")
+            setRunResult(null)
+            setJudgeResult(null)
+        },
+        onSuccess: (data: RunResult) => {
+            setRunResult(data)
+            setStatus("done")
+        },
+        onError: () => setStatus("error"),
     });
 
+    const submitRequestPayload: RunCodeRequest = { language: language, problemId: problem?.id!, sourceCode: code };
+
+    const { mutate: submitCode, isPending: isSubmitting } = useMutation({
+        mutationFn: mutate(executionApi.submit, { body: submitRequestPayload }),
+        onMutate: () => {
+            setStatus("submitting")
+            setRunResult(null)
+            setJudgeResult(null)
+        },
+        onSuccess: (data: SubmitResult) => {
+            setJudgeResult(data)
+            setStatus("done")
+            queryClient.invalidateQueries({
+                queryKey: [problemApi.getSubmissions.path],
+            })
+        },
+        onError: () => setStatus("error"),
+    });
+
+    const handleLanguageChange = (lang: Language): void => {
+        setLanguage(lang)
+        setCode(DEFAULT_CODE[lang])
+    }
+
+    const handleReset = (): void => setCode(DEFAULT_CODE[language])
+
     const handleRun = (): void => {
-        setExecStatus("running")
-        createSubmission(submissionPayload);
+        if (!problem?.id) return
+        runCode({ problemId: problem.id, language, sourceCode: code })
     }
 
     const handleSubmit = (): void => {
-        setExecStatus("submitting")
-        createSubmission(submissionPayload);
+        if (!problem?.id) return
+        submitCode({ problemId: problem.id, language, sourceCode: code })
     }
 
-    if (!slug || !problem) {
-        return <NotFoundPage />
-    }
-
-    if (isProblemLoading) {
-        return <Spinner fullScreen size="lg" />;
-    }
+    if (isLoading) return <Spinner fullScreen />
+    if (isError || !problem) return <NotFoundPage />
 
     return (
-        <div className="flex h-[calc(100vh-56px)] flex-col overflow-hidden">
-            {/* Main content */}
-            <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden">
-                {/* ── Left: description ── */}
-                <ResizablePanel defaultSize={35}>
-                    <Tabs defaultValue="description" className="flex flex-col">
-                        <TabsList className="w-full shrink-0 justify-start gap-0 rounded-none border-b border-border bg-transparent px-2">
-                            <div>
-                                <TabsTrigger
-                                    value="description"
-                                    className="h-8 gap-1.5 rounded-lg px-3 my-4 text-xs data-[state=active]:bg-accent data-[state=active]:shadow-none"
-                                >
-                                    <BookOpen className="h-3 w-3" /> Description
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    value="submissions"
-                                    className="h-8 gap-1.5 rounded-lg px-3 my-4 text-xs data-[state=active]:bg-accent data-[state=active]:shadow-none"
-                                >
-                                    <History className="h-3 w-3" /> Submissions
-                                </TabsTrigger>
-                            </div>
-                        </TabsList>
-
-                        <TabsContent value="description" className="min-h-0 flex-1 overflow-hidden mt-0">
-                            <ScrollArea className="h-full">
-                                <ProblemDescription problem={problem} />
-                            </ScrollArea>
+        <ResizablePanelGroup orientation="horizontal" className="h-[calc(100vh-3.5rem)]">
+            <ResizablePanel defaultSize={40} minSize={28}>
+                <Tabs defaultValue="description" className="flex h-full flex-col">
+                    <TabsList variant="line" className="shrink-0 px-4">
+                        <TabsTrigger value="description">
+                            <BookOpen className="mr-1.5 h-4 w-4" />
+                            Description
+                        </TabsTrigger>
+                        <TabsTrigger value="submissions">
+                            <History className="mr-1.5 h-4 w-4" />
+                            Submissions
+                        </TabsTrigger>
+                    </TabsList>
+                    <ScrollArea className="flex-1">
+                        <TabsContent value="description" className="m-0">
+                            <ProblemDescription problem={problem} />
                         </TabsContent>
-
-                        <TabsContent value="submissions" className="min-h-0 flex-1 overflow-hidden mt-0">
-                            <ScrollArea className="h-full">
-                                <SubmissionsTab />
-                            </ScrollArea>
+                        <TabsContent value="submissions" className="m-0">
+                            <SubmissionsTab problemId={problem?.id} />
                         </TabsContent>
-                    </Tabs>
-                </ResizablePanel>
+                    </ScrollArea>
+                </Tabs>
+            </ResizablePanel>
 
-                <ResizableHandle withHandle />
+            <ResizableHandle />
 
-                {/* ── Right: editor + output ── */}
-                <ResizablePanel defaultSize={62} minSize={35}>
-                    <ResizablePanelGroup orientation="vertical">
-                        {/* Editor */}
-                        <ResizablePanel defaultSize={62} minSize={30}>
-                            <div className="flex h-full flex-col">
-                                <EditorToolbar
-                                    language={language}
-                                    onLanguageChange={handleLanguageChange}
-                                    onReset={handleReset}
-                                    onRun={handleRun}
-                                    onSubmit={handleSubmit}
-                                    isRunning={execStatus === "running"}
-                                    isSubmitting={execStatus === "submitting"}
-                                    code={code}
-                                />
-                                <div className="min-h-0 flex-1">
-                                    <CodeEditor
-                                        key={language}
-                                        language={language}
-                                        initialCode={code}
-                                        onCodeChange={setCode}
-                                    />
-                                </div>
-                            </div>
-                        </ResizablePanel>
-
-                        <ResizableHandle withHandle />
-
-                        {/* Output */}
-                        <ResizablePanel defaultSize={38} minSize={18}>
-                            <OutputPanel
-                                status={execStatus}
-                                result={submissionResponse?? null}
-                                customInput={customInput}
-                                onCustomInputChange={setCustomInput}
+            <ResizablePanel defaultSize={60} minSize={40}>
+                <ResizablePanelGroup orientation="vertical">
+                    <ResizablePanel defaultSize={65} minSize={40}>
+                        <div className="flex h-full flex-col">
+                            <EditorToolbar
+                                language={language}
+                                onLanguageChange={handleLanguageChange}
+                                onReset={handleReset}
+                                onRun={handleRun}
+                                onSubmit={handleSubmit}
+                                isRunning={isRunning}
+                                isSubmitting={isSubmitting}
+                                code={code}
                             />
-                        </ResizablePanel>
-                    </ResizablePanelGroup>
-                </ResizablePanel>
-            </ResizablePanelGroup>
-        </div>
+                            <div className="flex-1 overflow-hidden">
+                                <CodeEditor
+                                    language={language}
+                                    initialCode={code}
+                                    onCodeChange={setCode}
+                                />
+                            </div>
+                        </div>
+                    </ResizablePanel>
+
+                    <ResizableHandle />
+
+                    <ResizablePanel defaultSize={35} minSize={15}>
+                        <OutputPanel
+                            status={status}
+                            runResult={runResult}
+                            judgeResult={judgeResult}
+                        />
+                    </ResizablePanel>
+                </ResizablePanelGroup>
+            </ResizablePanel>
+        </ResizablePanelGroup>
     )
 }
