@@ -38,7 +38,7 @@ export class DockerExecutionService {
   private readonly logger = new Logger(DockerExecutionService.name);
   private readonly isWindows = os.platform() === 'win32';
 
-  constructor(private readonly languageRegistry: LanguageRegistry) {}
+  constructor(private readonly languageRegistry: LanguageRegistry) { }
 
   async execute(options: ExecutionOptions): Promise<ExecutionResult> {
     const strategy = this.languageRegistry.resolve(options.language);
@@ -92,15 +92,17 @@ export class DockerExecutionService {
 
       // ── Run phase ──────────────────────────────────────────────────
       const runCmd = strategy.getRunCommand();
+      const wrappedRunCmd = `start=$(date +%s%N); ${runCmd} < /sandbox/stdin.txt; rc=$?; end=$(date +%s%N); echo "__T:$((end-start))" >&2; exit $rc`;
       return await this.runContainer({
         containerName: `${containerName}-run`,
         image: strategy.dockerImage,
         workDir,
-        command: ['sh', '-c', `${runCmd} < /sandbox/stdin.txt`],
+        command: ['sh', '-c', `${wrappedRunCmd} < /sandbox/stdin.txt`],
         securityFlags: RUN_SECURITY_FLAGS,
         volumeMode: 'ro',
         timeLimitMs: options.timeLimitMs,
         memoryLimitMb: options.memoryLimitMb,
+        isRunPhase: true,
       });
 
     }
@@ -121,6 +123,7 @@ export class DockerExecutionService {
     volumeMode: 'ro' | 'rw';
     timeLimitMs: number;
     memoryLimitMb: number;
+    isRunPhase?: boolean; // NEW OPTIONAL FLAG
   }): Promise<ExecutionResult> {
     const {
       containerName,
@@ -130,10 +133,10 @@ export class DockerExecutionService {
       securityFlags, 
       volumeMode, 
       timeLimitMs,
-      memoryLimitMb
+      memoryLimitMb,
+      isRunPhase = false
      } = params;
 
-    // Normalize Windows backward slashes to forward slashes for Docker compatibility
     const normalizedWorkDir = this.isWindows ? workDir.replace(/\\/g, '/') : workDir;
 
     const dockerArgs = [
@@ -155,24 +158,23 @@ export class DockerExecutionService {
     let stdout = '';
     let stderr = '';
     let exitCode = 0;
-    let timedOut = false;
+    let outerTimedOut = false;
     let oomKilled = false;
 
+    // ADD A 1500MS SAFETY SLACK FOR DOCKER PLUMBING
     const killTimer = setTimeout(async () => {
-      timedOut = true;
+      outerTimedOut = true;
       await this.killContainer(containerName);
-    }, timeLimitMs);
+    }, timeLimitMs + 1500);
 
     try {
-      // Build platform-safe process environment variables
       const env = { ...process.env };
       if (this.isWindows) {
-        // Stop Git Bash/MSYS path mangling from twisting the volume arguments
         env['MSYS_NO_PATHCONV'] = '1';
       }
 
       const result = await execFileAsync('docker', dockerArgs, {
-        maxBuffer: MAX_OUTPUT_BYTES * 2, // give execFileAsync room; we truncate ourselves
+        maxBuffer: MAX_OUTPUT_BYTES * 2,
         env,
       });
       stdout = result.stdout;
@@ -182,20 +184,41 @@ export class DockerExecutionService {
       stderr = err.stderr ?? '';
       exitCode = err.code ?? 1;
 
-      // Docker OOM = SIGKILL = exit code 137. Only flag if we didn't trigger the kill timeout ourselves.
-      if (exitCode === 137 && !timedOut) {
+      if (exitCode === 137 && !outerTimedOut) {
         oomKilled = true;
       }
     } finally {
       clearTimeout(killTimer);
     }
 
+    // DEFAULT FALLBACK VALUES
+    let executionTimeMs = Date.now() - startTime; 
+    let finalTimedOut = outerTimedOut;
+
+    // PARSE IN-CONTAINER REAL TIME (RUN PHASE ONLY)
+    if (isRunPhase) {
+      const markerRegex = /__T:(\Bigint|\d+)\r?\n?$/;
+      const match = stderr.match(markerRegex);
+
+      if (match) {
+        const nanoseconds = BigInt(match[1]);
+        // Convert to rounded milliseconds
+        executionTimeMs = Number(nanoseconds / 1_000_000n); 
+        // Remove the tracking marker from standard error output
+        stderr = stderr.replace(markerRegex, ''); 
+      }
+
+      if (executionTimeMs > timeLimitMs) {
+        finalTimedOut = true;
+      }
+    }
+
     return {
       stdout: stdout.slice(0, MAX_OUTPUT_BYTES).trim(),
       stderr: stderr.slice(0, MAX_OUTPUT_BYTES).trim(),
       exitCode,
-      executionTimeMs: Date.now() - startTime,
-      timedOut,
+      executionTimeMs,
+      timedOut: finalTimedOut,
       oomKilled,
     };
   }

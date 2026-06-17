@@ -21,25 +21,17 @@ export interface SubmitCodeRequest {
   sourceCode: string
 }
 
-export interface RunTestCaseResult {
-  testCaseId: string
-  input: string
-  expectedOutput: string
-  verdict: SubmissionVerdict
-  executionTimeMs: number
-  stdout?: string
-  stderr?: string
-}
-
 export interface RunResult {
   verdict: SubmissionVerdict
   passedCount: number
   totalCount: number
-  testCaseResults: RunTestCaseResult[]
+  testCaseResults: TestCaseResult[]
 }
 
 export interface TestCaseResult {
   testCaseId: string
+  input: string
+  expectedOutput: string
   verdict: SubmissionVerdict
   executionTimeMs: number
   memoryUsedMb?: number

@@ -3,9 +3,8 @@ import {
   ExecutionResult,
   JudgeResult,
   RunResult,
-  RunTestCaseResult,
-  SubmissionVerdict,
   TestCaseResult,
+  SubmissionVerdict,
 } from './execution.types';
 import { ProblemsService } from '../problems/problems.service';
 import { DockerExecutionService } from './docker-execution.service';
@@ -47,7 +46,7 @@ export class ExecutionService {
 
     let passedCount = 0;
     let overallVerdict = SubmissionVerdict.ACCEPTED;
-    const testCaseResults: RunTestCaseResult[] = results.map(({ tc, result, verdict }) => {
+    const testCaseResults: TestCaseResult[] = results.map(({ tc, result, verdict }) => {
       if (verdict === SubmissionVerdict.ACCEPTED) passedCount++;
       else if (overallVerdict === SubmissionVerdict.ACCEPTED) overallVerdict = verdict;
       return {
@@ -100,6 +99,8 @@ export class ExecutionService {
 
       const tcResult: TestCaseResult = {
         testCaseId: tc.id,
+        expectedOutput: tc.expectedOutput,
+        input: tc.input,
         verdict: tcVerdict,
         executionTimeMs: result.executionTimeMs,
         memoryUsedMb: result.memoryUsedMb,

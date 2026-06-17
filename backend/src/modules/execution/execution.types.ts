@@ -42,19 +42,11 @@ export interface ProblemExample {
 
 export interface TestCaseResult {
   testCaseId: string;
-  verdict: SubmissionVerdict;
-  executionTimeMs: number;
-  memoryUsedMb?: number;
-  stdout?: string;
-  stderr?: string;
-}
-
-export interface RunTestCaseResult {
-  testCaseId: string;
   input: string;
   expectedOutput: string;
   verdict: SubmissionVerdict;
   executionTimeMs: number;
+    memoryUsedMb?: number;
   stdout?: string;
   stderr?: string;
 }
@@ -63,7 +55,7 @@ export interface RunResult {
   verdict: SubmissionVerdict;
   passedCount: number;
   totalCount: number;
-  testCaseResults: RunTestCaseResult[];
+  testCaseResults: TestCaseResult[];
 }
 
 export interface JudgeResult {
