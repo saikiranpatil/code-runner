@@ -4,11 +4,10 @@ import { envConfig } from "./env.config";
 
 export const loggerConfig: LoggerParams = {
     pinoHttp: {
-        transport:
-            envConfig.app.nodeEnv === NODE_ENVS.DEVELOPMENT
-                ? {
-                    target: 'pino-pretty',
-                    options: { singleLine: true, colorize: true },
-                } : undefined,
+        transport: envConfig.app.nodeEnv === NODE_ENVS.DEVELOPMENT
+            ? {
+                target: 'pino-pretty',
+                options: { singleLine: true, colorize: true },
+            } : undefined,
     },
 };

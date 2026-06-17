@@ -69,6 +69,16 @@ export class ExecutionService {
     const problem = await this.problemsService.findWithTestCases(dto.problemId, true);
     const testCases = problem.testCases;
 
+    const executionResults = await Promise.all(testCases.map(async tc => {
+      return await this.dockerExecutionService.execute({
+        language: dto.language,
+        sourceCode: dto.sourceCode,
+        stdin: tc.input,
+        timeLimitMs: problem.timeLimitMs,
+        memoryLimitMb: problem.memoryLimitMb,
+      });
+    }));
+
     let verdict = SubmissionVerdict.ACCEPTED;
     let passedCount = 0;
     let maxExecutionTimeMs = 0;
@@ -83,15 +93,8 @@ export class ExecutionService {
       stderr?: string;
     }[] = [];
 
-    for (const tc of testCases) {
-      const result = await this.dockerExecutionService.execute({
-        language: dto.language,
-        sourceCode: dto.sourceCode,
-        stdin: tc.input,
-        timeLimitMs: problem.timeLimitMs,
-        memoryLimitMb: problem.memoryLimitMb,
-      });
-
+    testCases.forEach((tc, idx) => {
+      const result = executionResults[idx];
       const tcVerdict = this.determineVerdict(result, tc.expectedOutput, problem.timeLimitMs);
       maxExecutionTimeMs = Math.max(maxExecutionTimeMs, result.executionTimeMs);
 
@@ -119,7 +122,7 @@ export class ExecutionService {
         verdict = tcVerdict;
         firstFailedResult = tcResult;
       }
-    }
+    })
 
     const submission = await this.prisma.submission.create({
       data: {
