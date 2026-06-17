@@ -10,16 +10,17 @@ import { ListProblemsDto } from './dto/list-problems.dto';
 import {
   PaginatedProblemsEntity,
   ProblemEntity,
+  ProblemStats,
   TestCaseEntity,
 } from './entities/problem.entity';
 import { Prisma } from '../../prisma/generated/client';
-import { ProblemExample } from '../execution/execution.types';
+import { AttemptStatus, ProblemExample } from '../execution/execution.types';
 
 @Injectable()
 export class ProblemsService {
   private readonly logger = new Logger(ProblemsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateProblemDto): Promise<ProblemEntity> {
     const existing = await this.prisma.problem.findUnique({
@@ -45,19 +46,20 @@ export class ProblemsService {
         examples: (dto.examples ?? []) as any,
         testCases: dto.testCases?.length
           ? {
-              create: dto.testCases.map((tc, i) => ({
-                input: tc.input,
-                expectedOutput: tc.expectedOutput,
-                isHidden: tc.isHidden ?? false,
-                position: i,
-              })),
-            }
+            create: dto.testCases.map((tc, i) => ({
+              input: tc.input,
+              expectedOutput: tc.expectedOutput,
+              isHidden: tc.isHidden ?? false,
+              position: i,
+            })),
+          }
           : undefined,
       },
       include: { testCases: true },
     });
 
-    return this.mapToEntity(problem, { totalSubmissions: 0, acceptedSubmissions: 0 });
+    const problemStats = await this.getStats(problem?.id);
+    return this.mapToEntity(problem, problemStats);
   }
 
   async findById(id: string): Promise<ProblemEntity> {
@@ -69,12 +71,8 @@ export class ProblemsService {
     });
     if (!problem) throw new NotFoundException(`Problem "${id}" not found`);
 
-    const [totalSubmissions, acceptedSubmissions] = await Promise.all([
-      this.prisma.submission.count({ where: { problemId: id } }),
-      this.prisma.submission.count({ where: { problemId: id, verdict: 'ACCEPTED' } }),
-    ]);
-
-    return this.mapToEntity(problem, { totalSubmissions, acceptedSubmissions });
+    const problemStats = await this.getStats(problem?.id);
+    return this.mapToEntity(problem, problemStats);
   }
 
   async findBySlug(slug: string): Promise<ProblemEntity> {
@@ -86,12 +84,8 @@ export class ProblemsService {
     });
     if (!problem) throw new NotFoundException(`Problem "${slug}" not found`);
 
-    const [totalSubmissions, acceptedSubmissions] = await Promise.all([
-      this.prisma.submission.count({ where: { problemId: problem.id } }),
-      this.prisma.submission.count({ where: { problemId: problem.id, verdict: 'ACCEPTED' } }),
-    ]);
-
-    return this.mapToEntity(problem, { totalSubmissions, acceptedSubmissions });
+    const problemStats = await this.getStats(problem?.id);
+    return this.mapToEntity(problem, problemStats);
   }
 
   async list(dto: ListProblemsDto): Promise<PaginatedProblemsEntity> {
@@ -116,37 +110,43 @@ export class ProblemsService {
 
     // Single batched query for submission stats across all problems
     const problemIds = problems.map((p) => p.id);
+
     const submissionStats =
       problemIds.length > 0
         ? await this.prisma.submission.groupBy({
-            by: ['problemId', 'verdict'],
-            where: { problemId: { in: problemIds } },
-            _count: { id: true },
-          })
+          by: ['problemId', 'verdict'],
+          where: { problemId: { in: problemIds } },
+          _count: { id: true },
+        })
         : [];
 
-    const statsMap = new Map<string, { totalSubmissions: number; acceptedSubmissions: number }>();
+    const statsMap = new Map<string, { totalSubmissions: number; acceptedSubmissions: number, status: AttemptStatus }>();
     for (const stat of submissionStats) {
       if (!statsMap.has(stat.problemId)) {
-        statsMap.set(stat.problemId, { totalSubmissions: 0, acceptedSubmissions: 0 });
+        statsMap.set(stat.problemId, { totalSubmissions: 0, acceptedSubmissions: 0, status: AttemptStatus.UNATTEMPTED });
       }
       const s = statsMap.get(stat.problemId)!;
       s.totalSubmissions += stat._count.id;
-      if (stat.verdict === 'ACCEPTED') s.acceptedSubmissions += stat._count.id;
+      if (stat.verdict === 'ACCEPTED') {
+        s.acceptedSubmissions += stat._count.id;
+        s.status = AttemptStatus.SOLVED;
+      } else if (s.status !== AttemptStatus.SOLVED) {
+        s.status = AttemptStatus.ATTEMPTED;
+      }
     }
 
     return {
       problems: problems.map((p) =>
-        this.mapToEntity(p, statsMap.get(p.id) ?? { totalSubmissions: 0, acceptedSubmissions: 0 }),
+        this.mapToEntity(p, statsMap.get(p.id) ?? { totalSubmissions: 0, acceptedSubmissions: 0, status: AttemptStatus.UNATTEMPTED }),
       ),
       total,
     };
   }
 
-  async findWithTestCases(id: string) {
+  async findWithTestCases(id: string, includeHiddenTestcases: boolean = false) {
     const problem = await this.prisma.problem.findUnique({
       where: { id },
-      include: { testCases: { orderBy: { position: 'asc' } } },
+      include: { testCases: includeHiddenTestcases ? true : { where: { isHidden: false } } },
     });
     if (!problem) throw new NotFoundException(`Problem "${id}" not found`);
     return problem;
@@ -169,11 +169,28 @@ export class ProblemsService {
     });
   }
 
+  private async getStats(problemId: string) {
+    const [totalSubmissions, acceptedSubmissions] = await Promise.all([
+      this.prisma.submission.count({ where: { problemId } }),
+      this.prisma.submission.count({ where: { problemId, verdict: 'ACCEPTED' } }),
+    ]);
+
+    const attemptStatus = acceptedSubmissions > 0 ?
+      AttemptStatus.SOLVED : totalSubmissions > 0 ?
+        AttemptStatus.ATTEMPTED : AttemptStatus.UNATTEMPTED;
+
+    return {
+      acceptedSubmissions,
+      status: attemptStatus,
+      totalSubmissions
+    };
+  }
+
   private mapToEntity(
     problem: any,
-    stats: { totalSubmissions: number; acceptedSubmissions: number },
+    stats: ProblemStats,
   ): ProblemEntity {
-    const { totalSubmissions, acceptedSubmissions } = stats;
+    const { totalSubmissions, acceptedSubmissions, status } = stats;
     const acceptanceRate =
       totalSubmissions > 0
         ? Math.round((acceptedSubmissions / totalSubmissions) * 10000) / 100
@@ -205,6 +222,7 @@ export class ProblemsService {
           updatedAt: tc.updatedAt.toISOString(),
         }),
       ),
+      status,
       totalSubmissions,
       acceptedSubmissions,
       acceptanceRate,

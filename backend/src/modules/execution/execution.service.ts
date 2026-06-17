@@ -23,55 +23,51 @@ export class ExecutionService {
     private readonly dockerExecutionService: DockerExecutionService,
     private readonly outputEvaluator: OutputEvaluator,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async run(dto: RunCodeDto, _userId: number): Promise<RunResult> {
     const problem = await this.problemsService.findWithTestCases(dto.problemId);
-    const testCases = (problem.testCases as any[]).filter((tc) => !tc.isHidden);
+    const testCases = problem.testCases;
 
-    const testCaseResults: RunTestCaseResult[] = [];
+    const results = await Promise.all(
+      testCases.map((tc) =>
+        this.dockerExecutionService.execute({
+          language: dto.language,
+          sourceCode: dto.sourceCode,
+          stdin: tc.input,
+          timeLimitMs: problem.timeLimitMs,
+          memoryLimitMb: problem.memoryLimitMb,
+        }).then((result) => ({
+          tc,
+          result,
+          verdict: this.determineVerdict(result, tc.expectedOutput, problem.timeLimitMs),
+        }))
+      )
+    );
+
     let passedCount = 0;
     let overallVerdict = SubmissionVerdict.ACCEPTED;
-
-    for (const tc of testCases) {
-      const result = await this.dockerExecutionService.execute({
-        language: dto.language,
-        sourceCode: dto.sourceCode,
-        stdin: tc.input,
-        timeLimitMs: problem.timeLimitMs,
-        memoryLimitMb: problem.memoryLimitMb,
-      });
-
-      const verdict = this.determineVerdict(result, tc.expectedOutput, problem.timeLimitMs);
-
-      if (verdict === SubmissionVerdict.ACCEPTED) {
-        passedCount++;
-      } else if (overallVerdict === SubmissionVerdict.ACCEPTED) {
-        overallVerdict = verdict;
-      }
-
-      testCaseResults.push({
-        testCaseId: tc.id,
-        input: tc.input,
-        expectedOutput: tc.expectedOutput,
-        verdict,
-        executionTimeMs: result.executionTimeMs,
-        stdout: result.stdout,
-        stderr: result.stderr,
-      });
-    }
+    const testCaseResults: RunTestCaseResult[] = results.map(({ tc, result, verdict }) => {
+      if (verdict === SubmissionVerdict.ACCEPTED) passedCount++;
+      else if (overallVerdict === SubmissionVerdict.ACCEPTED) overallVerdict = verdict;
+      return {
+        testCaseId: tc.id, input: tc.input, expectedOutput: tc.expectedOutput,
+        verdict, executionTimeMs: result.executionTimeMs,
+        stdout: result.stdout, stderr: result.stderr,
+      };
+    });
 
     return {
       verdict: overallVerdict,
       passedCount,
       totalCount: testCases.length,
-      testCaseResults,
+      testCaseResults
     };
   }
 
   async judge(dto: SubmitCodeDto, userId: number): Promise<JudgeResult> {
-    const problem = await this.problemsService.findWithTestCases(dto.problemId);
-    const testCases = problem.testCases as any[];
+    const problem = await this.problemsService.findWithTestCases(dto.problemId, true);
+    const testCases = problem.testCases;
 
     let verdict = SubmissionVerdict.ACCEPTED;
     let passedCount = 0;

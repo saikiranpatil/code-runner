@@ -9,48 +9,37 @@ export const NODE_ENVS = {
 
 export type Language = "javascript" | "typescript" | "python" | "cpp" | "java"
 
-export const LANGUAGES: { label: string; value: Language, defaultCode: string }[] = [
+export const LANGUAGES: { label: string; value: Language }[] = [
     {
         label: "JavaScript",
         value: "javascript",
-        defaultCode: `function main() {
-    // Your code here
-}
-
-main();` },
+    },
     {
         label: "TypeScript",
         value: "typescript",
-        defaultCode: `function main(): void {
-    // Your code here
-}
-
-main();` },
+    },
     {
         label: "Python",
         value: "python",
-        defaultCode: `def main():
-    # Your code here
-
-if __name__ == "__main__":
-    main()` },
+    },
     {
         label: "C++",
         value: "cpp",
-        defaultCode: `#include <iostream>
-using namespace std;
-
-int main() {
-    // Your code here
-    return 0;
-}`,
     },
     {
         label: "Java",
         value: "java",
-        defaultCode: `public class Solution {
-    public static void main(String[] args) {
-        // Your code here
-    }
-}` },
+    },
 ];
+
+export const DEFAULT_CODE: Record<Language, string> = {
+    javascript:
+        "// Read from stdin via process.stdin\nconst lines = require('fs').readFileSync('/dev/stdin','utf8').split('\\n');\n",
+    typescript:
+        "// Read from stdin\nconst lines = require('fs').readFileSync('/dev/stdin','utf8').split('\\n');\n",
+    python: "import sys\nlines = sys.stdin.read().split('\\n')\n",
+    cpp: "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // your code here\n    return 0;\n}\n",
+    java: "import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // your code here\n    }\n}\n",
+}
+
+export const LANGUAGE_LOCAL_STORAGE_KEY = "LANGUAGE_LOCAL_STORAGE_KEY";

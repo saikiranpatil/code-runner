@@ -8,7 +8,7 @@ import {
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
 import CodeEditor from "@/common/components/code-editor"
-import { type Language } from "@/common/constants"
+import { DEFAULT_CODE, LANGUAGE_LOCAL_STORAGE_KEY, type Language } from "@/common/constants"
 import ProblemDescription from "@/components/problems/ProblemDetails/ProblemDescription"
 import SubmissionsTab from "@/components/problems/ProblemDetails/SubmisionsTab"
 import EditorToolbar from "@/components/problems/ProblemDetails/EditorToolbar"
@@ -24,22 +24,13 @@ import { Spinner } from "@/components/ui/spinner"
 import type { ExecStatus } from "../Problems"
 import type { RunResult, RunCodeRequest, SubmitResult } from "@/api/execution/execution"
 import queryClient from "@/utils/request/queryClient"
-
-const DEFAULT_CODE: Record<Language, string> = {
-    javascript:
-        "// Read from stdin via process.stdin\nconst lines = require('fs').readFileSync('/dev/stdin','utf8').split('\\n');\n",
-    typescript:
-        "// Read from stdin\nconst lines = require('fs').readFileSync('/dev/stdin','utf8').split('\\n');\n",
-    python: "import sys\nlines = sys.stdin.read().split('\\n')\n",
-    cpp: "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // your code here\n    return 0;\n}\n",
-    java: "import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // your code here\n    }\n}\n",
-}
+import { getItem, setItem } from "@/utils/localstorage"
 
 export default function ProblemDetail(): JSX.Element {
     const { slug } = useParams<{ slug: string }>()
 
-    const [language, setLanguage] = useState<Language>("javascript")
-    const [code, setCode] = useState<string>(DEFAULT_CODE["javascript"])
+    const [language, setLanguage] = useState<Language>(getItem(LANGUAGE_LOCAL_STORAGE_KEY) as Language || "javascript")
+    const [code, setCode] = useState<string>(DEFAULT_CODE[language])
     const [status, setStatus] = useState<ExecStatus>("idle")
     const [runResult, setRunResult] = useState<RunResult | null>(null)
     const [judgeResult, setJudgeResult] = useState<SubmitResult | null>(null)
@@ -91,6 +82,7 @@ export default function ProblemDetail(): JSX.Element {
 
     const handleLanguageChange = (lang: Language): void => {
         setLanguage(lang)
+        setItem(LANGUAGE_LOCAL_STORAGE_KEY, lang);
         setCode(DEFAULT_CODE[lang])
     }
 
@@ -110,67 +102,69 @@ export default function ProblemDetail(): JSX.Element {
     if (isError || !problem) return <NotFoundPage />
 
     return (
-        <ResizablePanelGroup orientation="horizontal" className="h-[calc(100vh-3.5rem)]">
-            <ResizablePanel defaultSize={40} minSize={28}>
-                <Tabs defaultValue="description" className="flex h-full flex-col">
-                    <TabsList variant="line" className="shrink-0 px-4">
-                        <TabsTrigger value="description">
-                            <BookOpen className="mr-1.5 h-4 w-4" />
-                            Description
-                        </TabsTrigger>
-                        <TabsTrigger value="submissions">
-                            <History className="mr-1.5 h-4 w-4" />
-                            Submissions
-                        </TabsTrigger>
-                    </TabsList>
-                    <ScrollArea className="flex-1">
-                        <TabsContent value="description" className="m-0">
-                            <ProblemDescription problem={problem} />
-                        </TabsContent>
-                        <TabsContent value="submissions" className="m-0">
-                            <SubmissionsTab problemId={problem?.id} />
-                        </TabsContent>
-                    </ScrollArea>
-                </Tabs>
-            </ResizablePanel>
+        <div className="h-[calc(100vh-3.5rem)]">
+            <ResizablePanelGroup orientation="horizontal" className="flex-col! md:flex-row!">
+                <ResizablePanel defaultSize={40} minSize={28}>
+                    <Tabs defaultValue="description" className="flex h-full flex-col">
+                        <TabsList variant="line" className="shrink-0 px-4">
+                            <TabsTrigger value="description">
+                                <BookOpen className="mr-1.5 h-4 w-4" />
+                                Description
+                            </TabsTrigger>
+                            <TabsTrigger value="submissions">
+                                <History className="mr-1.5 h-4 w-4" />
+                                Submissions
+                            </TabsTrigger>
+                        </TabsList>
+                        <ScrollArea className="flex-1">
+                            <TabsContent value="description" className="m-0">
+                                <ProblemDescription problem={problem} />
+                            </TabsContent>
+                            <TabsContent value="submissions" className="m-0">
+                                <SubmissionsTab problemId={problem?.id} />
+                            </TabsContent>
+                        </ScrollArea>
+                    </Tabs>
+                </ResizablePanel>
 
-            <ResizableHandle />
+                <ResizableHandle />
 
-            <ResizablePanel defaultSize={60} minSize={40}>
-                <ResizablePanelGroup orientation="vertical">
-                    <ResizablePanel defaultSize={65} minSize={40}>
-                        <div className="flex h-full flex-col">
-                            <EditorToolbar
-                                language={language}
-                                onLanguageChange={handleLanguageChange}
-                                onReset={handleReset}
-                                onRun={handleRun}
-                                onSubmit={handleSubmit}
-                                isRunning={isRunning}
-                                isSubmitting={isSubmitting}
-                                code={code}
-                            />
-                            <div className="flex-1 overflow-hidden">
-                                <CodeEditor
+                <ResizablePanel defaultSize={60} minSize={40}>
+                    <ResizablePanelGroup orientation="vertical">
+                        <ResizablePanel defaultSize={65} minSize={40}>
+                            <div className="flex h-full flex-col">
+                                <EditorToolbar
                                     language={language}
-                                    initialCode={code}
-                                    onCodeChange={setCode}
+                                    onLanguageChange={handleLanguageChange}
+                                    onReset={handleReset}
+                                    onRun={handleRun}
+                                    onSubmit={handleSubmit}
+                                    isRunning={isRunning}
+                                    isSubmitting={isSubmitting}
+                                    code={code}
                                 />
+                                <div className="flex-1 overflow-hidden">
+                                    <CodeEditor
+                                        language={language}
+                                        initialCode={code}
+                                        onCodeChange={setCode}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </ResizablePanel>
+                        </ResizablePanel>
 
-                    <ResizableHandle />
+                        <ResizableHandle />
 
-                    <ResizablePanel defaultSize={35} minSize={15}>
-                        <OutputPanel
-                            status={status}
-                            runResult={runResult}
-                            judgeResult={judgeResult}
-                        />
-                    </ResizablePanel>
-                </ResizablePanelGroup>
-            </ResizablePanel>
-        </ResizablePanelGroup>
+                        <ResizablePanel defaultSize={35} minSize={15}>
+                            <OutputPanel
+                                status={status}
+                                runResult={runResult}
+                                judgeResult={judgeResult}
+                            />
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
+                </ResizablePanel>
+            </ResizablePanelGroup>
+        </div>
     )
 }

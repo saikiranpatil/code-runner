@@ -10,6 +10,12 @@ export enum Visibility {
   DRAFT = 'DRAFT',
 }
 
+export enum AttemptStatus {
+  ATTEMPTED = 'ATTEMPTED',
+  SOLVED = 'SOLVED',
+  UNATTEMPTED = 'UNATTEMPTED',
+}
+
 export enum SubmissionVerdict {
   ACCEPTED = 'ACCEPTED',
   WRONG_ANSWER = 'WRONG_ANSWER',

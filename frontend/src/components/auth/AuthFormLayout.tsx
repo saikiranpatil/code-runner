@@ -57,7 +57,7 @@ export default function AuthFormLayout({
 
     const handleSocialLogin = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: ["OAuth"] });
-        navigate(URLs.problems.details);
+        navigate(URLs.problems.list);
     }, []);
 
     const { mutate: handleGoogleLogin, isPending: isGooglePending } = useMutation({

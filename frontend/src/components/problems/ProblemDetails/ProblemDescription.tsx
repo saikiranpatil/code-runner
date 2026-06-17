@@ -1,20 +1,13 @@
-import { useState, type JSX } from "react"
-import { Link, useParams } from "react-router-dom"
+import { type JSX } from "react"
 
 import type { Difficulty, ProblemEntity } from "@/api/problem/problem"
 
 import { CheckCircle2, ChevronRight, Flame, Hash, Zap } from "lucide-react"
 import { FaSeedling } from "react-icons/fa";
-import { MdBlock } from "react-icons/md";
 
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import InlineMarkdown from "@/components/problems/ProblemDetails/components/InlineMarkdown"
-import { useQuery } from "@tanstack/react-query"
-import problemApi from "@/api/problem/problemApi"
-import query from "@/utils/request/query"
-import { Spinner } from "@/components/ui/spinner"
-import NotFoundPage from "@/pages/NotFoundPage"
 
 interface DifficultyConfig {
     label: string
@@ -22,18 +15,10 @@ interface DifficultyConfig {
     Icon: React.ComponentType<{ className?: string }>
 }
 
-interface ProblemDetailData extends ProblemEntity {
-    number: number
-    acceptance: number
-    totalSubmissions: number
-    hints: string[]
-}
-
 const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     EASY: { label: "Easy", className: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", Icon: FaSeedling },
     MEDIUM: { label: "Medium", className: "text-amber-500 bg-amber-500/10 border-amber-500/20", Icon: Zap },
     HARD: { label: "Hard", className: "text-red-500 bg-red-500/10 border-red-500/20", Icon: Flame },
-    NONE: { label: "-", className: "text-red-500 bg-red-500/10 border-red-500/20", Icon: MdBlock },
 }
 
 export default function ProblemDescription({ problem }: { problem: ProblemEntity }): JSX.Element {
@@ -43,7 +28,6 @@ export default function ProblemDescription({ problem }: { problem: ProblemEntity
             <div className="space-y-2.5">
                 <div className="flex flex-wrap items-start gap-2">
                     <div className="flex items-baseline gap-1.5">
-                        {/* <span className="text-xs text-muted-foreground">{problem.number}.</span> */}
                         <h1 className="text-base font-semibold leading-tight">{problem.title}</h1>
                     </div>
                 </div>

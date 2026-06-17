@@ -1,7 +1,8 @@
 import type { Language } from "@/common/constants"
 
-export type Difficulty = "EASY" | "MEDIUM" | "HARD" | "NONE"
+export type Difficulty = "EASY" | "MEDIUM" | "HARD"
 export type Visibility = "PUBLIC" | "PRIVATE" | "DRAFT"
+export type AttemptStatus = "SOLVED" | "ATTEMPTED" | "UNATTEMPTED"
 export type SubmissionVerdict =
   | "ACCEPTED"
   | "WRONG_ANSWER"
@@ -46,6 +47,7 @@ export interface ProblemEntity {
   totalSubmissions: number
   acceptedSubmissions: number
   acceptanceRate: number
+  status: AttemptStatus
   createdAt: string
   updatedAt: string
 }

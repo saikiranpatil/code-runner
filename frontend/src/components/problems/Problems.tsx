@@ -5,12 +5,12 @@ import {
   CheckCircle2,
   Circle,
   Tag,
-  SlidersHorizontal,
   BookOpen,
   Zap,
   Flame,
   Leaf,
   X,
+  HelpCircle,
   type LucideIcon,
 } from "lucide-react"
 
@@ -18,16 +18,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
 import { Link } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
+import problemApi from "@/api/problem/problemApi"
+import query from "@/utils/request/query"
+import type { Difficulty, ProblemEntity } from "@/api/problem/problem"
+import { Spinner } from "../ui/spinner"
 
 type DifficultyFilter = Difficulty | "ALL"
 
@@ -41,22 +38,8 @@ const ALL_TAGS: string[] = [
   "union-find", "monotonic-stack", "recursion",
 ]
 
-interface SortOption {
-  label: string
-  value: string
-}
-
-const SORT_OPTIONS: SortOption[] = [
-  { label: "Newest first", value: "newest" },
-  { label: "Oldest first", value: "oldest" },
-  { label: "Title A–Z", value: "title-asc" },
-  { label: "Acceptance ↓", value: "acceptance-desc" },
-]
-
 const PER_PAGE = 15
 
-export type Difficulty = "EASY" | "MEDIUM" | "HARD"
-export type Visibility = "PUBLIC" | "PRIVATE" | "DRAFT"
 export type SupportedLanguage = "javascript" | "typescript" | "python" | "cpp" | "java"
 
 export type SubmissionVerdict =
@@ -139,21 +122,6 @@ export interface LanguageOption {
   value: SupportedLanguage
 }
 
-const DUMMY_PROBLEMS: ProblemListItem[] = [
-  { id: "clx001", number: 1, title: "Two Sum", slug: "two-sum", difficulty: "EASY", tags: ["array", "hash-table"], acceptance: 49.2, solved: true },
-  { id: "clx002", number: 2, title: "Reverse Linked List", slug: "reverse-linked-list", difficulty: "EASY", tags: ["linked-list", "recursion"], acceptance: 74.8, solved: true },
-  { id: "clx003", number: 3, title: "Valid Parentheses", slug: "valid-parentheses", difficulty: "EASY", tags: ["string", "stack"], acceptance: 40.1, solved: false },
-  { id: "clx004", number: 4, title: "Binary Search", slug: "binary-search", difficulty: "EASY", tags: ["array", "binary-search"], acceptance: 57.3, solved: false },
-  { id: "clx005", number: 5, title: "Sort an Array", slug: "sort-an-array", difficulty: "MEDIUM", tags: ["array", "divide-and-conquer", "sorting"], acceptance: 65.4, solved: false },
-  { id: "clx006", number: 6, title: "Longest Common Subsequence", slug: "longest-common-subsequence", difficulty: "MEDIUM", tags: ["string", "dynamic-programming"], acceptance: 58.7, solved: false },
-  { id: "clx007", number: 7, title: "Number of Islands", slug: "number-of-islands", difficulty: "MEDIUM", tags: ["array", "depth-first-search", "breadth-first-search", "graph", "union-find"], acceptance: 57.9, solved: false },
-  { id: "clx008", number: 8, title: "Trapping Rain Water", slug: "trapping-rain-water", difficulty: "HARD", tags: ["array", "two-pointers", "dynamic-programming", "monotonic-stack"], acceptance: 60.2, solved: false },
-  { id: "clx009", number: 9, title: "Median of Two Sorted Arrays", slug: "median-two-sorted-arrays", difficulty: "HARD", tags: ["array", "binary-search", "divide-and-conquer"], acceptance: 38.5, solved: false },
-  { id: "clx010", number: 10, title: "Sliding Window Maximum", slug: "sliding-window-maximum", difficulty: "HARD", tags: ["array", "queue", "monotonic-stack"], acceptance: 46.1, solved: false },
-]
-
-// ─── Difficulty config ─────────────────────────────────────────────────────────
-
 interface DifficultyConfig {
   label: string
   className: string
@@ -201,12 +169,12 @@ const AcceptanceBar: FC<AcceptanceBarProps> = ({ value }) => {
 // ─── Stats bar ─────────────────────────────────────────────────────────────────
 
 interface StatsBarProps {
-  problems: ProblemListItem[]
+  problems: ProblemEntity[]
 }
 
 const StatsBar: FC<StatsBarProps> = ({ problems }) => {
   const total = problems.length
-  const solved = problems.filter((p) => p.solved).length
+  const solved = problems.filter((p) => p.status === "SOLVED").length
 
   const byDiff = (d: Difficulty) => problems.filter((p) => p.difficulty === d)
   const easy = byDiff("EASY")
@@ -214,9 +182,9 @@ const StatsBar: FC<StatsBarProps> = ({ problems }) => {
   const hard = byDiff("HARD")
 
   const stats: Array<{ label: string; solved: number; total: number; color: string }> = [
-    { label: "Easy", solved: easy.filter((p) => p.solved).length, total: easy.length, color: "text-emerald-500" },
-    { label: "Medium", solved: medium.filter((p) => p.solved).length, total: medium.length, color: "text-amber-500" },
-    { label: "Hard", solved: hard.filter((p) => p.solved).length, total: hard.length, color: "text-red-500" },
+    { label: "Easy", solved: easy.filter((p) => p.status === "SOLVED").length, total: easy.length, color: "text-emerald-500" },
+    { label: "Medium", solved: medium.filter((p) => p.status === "SOLVED").length, total: medium.length, color: "text-amber-500" },
+    { label: "Hard", solved: hard.filter((p) => p.status === "SOLVED").length, total: hard.length, color: "text-red-500" },
   ]
 
   const circumference = 2 * Math.PI * 22
@@ -314,12 +282,13 @@ const TagFilter: FC<TagFilterProps> = ({ selected, onChange }) => {
 // ─── Problem row ───────────────────────────────────────────────────────────────
 
 interface ProblemRowProps {
-  problem: ProblemListItem
+  problem: ProblemEntity
   index: number
 }
 
 const ProblemRow: FC<ProblemRowProps> = ({ problem, index }) => {
-  const { number, title, slug, difficulty, tags, acceptance, solved } = problem
+  const { title, slug, difficulty, tags, acceptanceRate, status } = problem
+  const number = index + 1;
   const isEven = index % 2 === 0
 
   return (
@@ -330,11 +299,16 @@ const ProblemRow: FC<ProblemRowProps> = ({ problem, index }) => {
     >
       {/* Solved indicator */}
       <div className="flex w-5 shrink-0 items-center justify-center">
-        {solved ? (
+        {status === "SOLVED" && (
           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-        ) : (
+        )}
+        {status === "ATTEMPTED" && (
+          <HelpCircle className="h-4 w-4 text-amber-500" />
+        )}
+        {status === "UNATTEMPTED" && (
           <Circle className="h-4 w-4 text-muted-foreground/30" />
         )}
+
       </div>
 
       {/* Number */}
@@ -366,7 +340,7 @@ const ProblemRow: FC<ProblemRowProps> = ({ problem, index }) => {
 
       {/* Acceptance */}
       <div className="hidden shrink-0 sm:block" style={{ width: "8rem" }}>
-        <AcceptanceBar value={acceptance} />
+        <AcceptanceBar value={acceptanceRate} />
       </div>
 
       {/* Difficulty */}
@@ -407,10 +381,23 @@ export default function ProblemsPage() {
   const [search, setSearch] = useState<string>("")
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("ALL")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [sort, setSort] = useState<string>("newest")
   const [page, setPage] = useState<number>(1)
 
-  const filtered = DUMMY_PROBLEMS.filter((p) => {
+  const { data: problemsResponse, isLoading } = useQuery({
+    queryKey: ["getProblemsList", page, selectedTags, search],
+    queryFn: query(problemApi.list, {
+      queryParams: {
+        difficulty: difficulty !== "ALL" ? difficulty : undefined,
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        page,
+        limit: 50,
+      },
+    }),
+  })
+
+  const { problems } = problemsResponse || { problems: [], total: 0 };
+
+  const filtered = problems.filter((p) => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase())
     const matchDiff = difficulty === "ALL" || p.difficulty === difficulty
     const matchTags = selectedTags.length === 0 || selectedTags.every((t) => p.tags.includes(t))
@@ -449,7 +436,7 @@ export default function ProblemsPage() {
   return (
     <div className="mx-auto flex h-[calc(100vh-56px)] max-w-6xl flex-col gap-5 px-4 py-5 lg:px-6">
       {/* Stats */}
-      <StatsBar problems={DUMMY_PROBLEMS} />
+      <StatsBar problems={problems} />
 
       {/* Filters */}
       <div className="flex flex-col gap-3">
@@ -472,20 +459,6 @@ export default function ProblemsPage() {
               </button>
             )}
           </div>
-
-          <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="hidden w-40 rounded-xl sm:flex">
-              <SlidersHorizontal className="mr-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectGroup>
-                {SORT_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Difficulty toggle */}
@@ -503,7 +476,7 @@ export default function ProblemsPage() {
                   key={d}
                   value={d}
                   size="sm"
-                  className="h-8 rounded-xl px-3 text-xs font-medium data-[state=on]:bg-accent"
+                  className="h-8 rounded-xl px-3 text-xs font-medium"
                 >
                   {cfg && <cfg.Icon className={`mr-1.5 h-3 w-3 ${cfg.className.split(" ")[0]}`} />}
                   {d === "ALL" ? "All" : cfg?.label}
@@ -526,72 +499,81 @@ export default function ProblemsPage() {
         <TagFilter selected={selectedTags} onChange={handleTagsChange} />
       </div>
 
-      {/* Table */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border">
-        {/* Header */}
-        <div className="flex items-center gap-4 border-b border-border bg-muted/40 px-4 py-2.5">
-          <div className="w-5 shrink-0" />
-          <span className="w-8 shrink-0 text-right text-xs font-medium text-muted-foreground">#</span>
-          <span className="flex-1 text-xs font-medium text-muted-foreground">Title</span>
-          <span className="hidden text-xs font-medium text-muted-foreground xl:block" style={{ width: "12rem" }}>Tags</span>
-          <span className="hidden text-xs font-medium text-muted-foreground sm:block" style={{ width: "8rem" }}>Acceptance</span>
-          <span className="shrink-0 text-xs font-medium text-muted-foreground" style={{ width: "5rem" }}>Difficulty</span>
-          <div className="w-4 shrink-0" />
+      {isLoading ? (
+        <div className="flex w-full justify-center">
+          <Spinner />
         </div>
-
-        {/* Rows */}
-        <ScrollArea className="flex-1">
-          {paginated.length === 0 ? (
-            <EmptyState onReset={resetFilters} />
-          ) : (
-            <div className="divide-y divide-border/50">
-              {paginated.map((p, i) => (
-                <ProblemRow key={p.id} problem={p} index={i} />
-              ))}
+      ) : (
+        <>
+          {/* Table */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border">
+            {/* Header */}
+            <div className="flex items-center gap-4 border-b border-border bg-muted/40 px-4 py-2.5">
+              <div className="w-5 shrink-0" />
+              <span className="w-8 shrink-0 text-right text-xs font-medium text-muted-foreground">#</span>
+              <span className="flex-1 text-xs font-medium text-muted-foreground">Title</span>
+              <span className="hidden text-xs font-medium text-muted-foreground xl:block" style={{ width: "12rem" }}>Tags</span>
+              <span className="hidden text-xs font-medium text-muted-foreground sm:block" style={{ width: "8rem" }}>Acceptance</span>
+              <span className="shrink-0 text-xs font-medium text-muted-foreground" style={{ width: "5rem" }}>Difficulty</span>
+              <div className="w-4 shrink-0" />
             </div>
-          )}
-        </ScrollArea>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-2.5">
-          <span className="text-xs text-muted-foreground">
-            {filtered.length === 0
-              ? "No results"
-              : `${(page - 1) * PER_PAGE + 1}–${Math.min(page * PER_PAGE, filtered.length)} of ${filtered.length}`}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline" size="sm"
-              className="h-7 rounded-lg px-2.5 text-xs"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              Previous
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => Math.abs(p - page) <= 2)
-              .map((p) => (
+            {/* Rows */}
+            <ScrollArea className="flex-1 h-full">
+              {paginated.length === 0 ? (
+                <EmptyState onReset={resetFilters} />
+              ) : (
+                <div className="divide-y divide-border/50">
+                  {paginated.map((p, i) => (
+                    <ProblemRow key={p.id} problem={p} index={i} />
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-2.5">
+              <span className="text-xs text-muted-foreground">
+                {filtered.length === 0
+                  ? "No results"
+                  : `${(page - 1) * PER_PAGE + 1}–${Math.min(page * PER_PAGE, filtered.length)} of ${filtered.length}`}
+              </span>
+              <div className="flex items-center gap-1">
                 <Button
-                  key={p}
-                  variant={p === page ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 w-7 rounded-lg p-0 text-xs"
-                  onClick={() => setPage(p)}
+                  variant="outline" size="sm"
+                  className="h-7 rounded-lg px-2.5 text-xs"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
                 >
-                  {p}
+                  Previous
                 </Button>
-              ))}
-            <Button
-              variant="outline" size="sm"
-              className="h-7 rounded-lg px-2.5 text-xs"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => Math.abs(p - page) <= 2)
+                  .map((p) => (
+                    <Button
+                      key={p}
+                      variant={p === page ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 w-7 rounded-lg p-0 text-xs"
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </Button>
+                  ))}
+                <Button
+                  variant="outline" size="sm"
+                  className="h-7 rounded-lg px-2.5 text-xs"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
+
     </div>
   )
 }
