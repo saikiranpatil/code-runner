@@ -48,7 +48,7 @@ export class ExecutionService {
     private readonly dockerExecutionService: DockerExecutionService,
     private readonly outputEvaluator: OutputEvaluator,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -133,17 +133,17 @@ export class ExecutionService {
   ): Promise<TestCaseExecution[]> {
     const executions: TestCaseExecution[] = [];
 
-    for (const testCase of testCases) {
-      const execution = await this.executeTestCase(
-        testCase,
-        language,
-        sourceCode,
-        timeLimitMs,
-        memoryLimitMb,
-      );
-      executions.push(execution);
+    const executionPromises = testCases.map((testCase) =>
+      this.executeTestCase(testCase, language, sourceCode, timeLimitMs, memoryLimitMb)
+    );
 
-      if (execution.verdict === SubmissionVerdict.COMPILATION_ERROR) break;
+    const results = await Promise.all(executionPromises);
+
+    for (const execution of results) {
+      executions.push(execution);
+      if (execution.verdict === SubmissionVerdict.COMPILATION_ERROR) {
+        break;
+      }
     }
 
     return executions;
@@ -175,8 +175,6 @@ export class ExecutionService {
     };
   }
 
-  // ── Private: verdict logic ─────────────────────────────────────────────────
-
   /**
    * Maps a raw `ExecutionResult` onto a `SubmissionVerdict`.
    * Checks are ordered from most-definitive to least: the `compilationFailed`
@@ -196,8 +194,6 @@ export class ExecutionService {
     return SubmissionVerdict.ACCEPTED;
   }
 
-  // ── Private: result aggregation ────────────────────────────────────────────
-
   /**
    * Derives the overall submission verdict and statistics from a list of
    * per-test-case executions.
@@ -215,7 +211,7 @@ export class ExecutionService {
       if (verdict === SubmissionVerdict.ACCEPTED) {
         passedCount++;
       } else if (overallVerdict === SubmissionVerdict.ACCEPTED) {
-        overallVerdict = verdict; // Capture the first failing verdict.
+        overallVerdict = verdict;
       }
       if (result.executionTimeMs > maxExecutionTimeMs) {
         maxExecutionTimeMs = result.executionTimeMs;
@@ -225,12 +221,6 @@ export class ExecutionService {
     return { overallVerdict, passedCount, maxExecutionTimeMs };
   }
 
-  // ── Private: result mapping ────────────────────────────────────────────────
-
-  /**
-   * Maps to the run-specific shape, which includes `input` and `expectedOutput`
-   * so the UI can display them inline next to the verdict.
-   */
   private toRunTestCaseResult(execution: TestCaseExecution): RunTestCaseResult {
     return {
       testCaseId: execution.testCaseId,
@@ -243,10 +233,6 @@ export class ExecutionService {
     };
   }
 
-  /**
-   * Maps to the judge-specific shape. Does NOT include `input` or `expectedOutput`
-   * because hidden test case data must not be leaked to the client.
-   */
   private toTestCaseResult(execution: TestCaseExecution): TestCaseResult {
     return {
       testCaseId: execution.testCaseId,
@@ -257,8 +243,6 @@ export class ExecutionService {
       stderr: execution.result.stderr,
     };
   }
-
-  // ── Private: persistence ───────────────────────────────────────────────────
 
   private async persistSubmission(params: {
     dto: SubmitCodeDto;
