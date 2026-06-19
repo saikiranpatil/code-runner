@@ -1,5 +1,3 @@
-import { type Dispatch } from "react";
-
 import Editor from "@monaco-editor/react";
 
 import type {
@@ -20,7 +18,7 @@ const options: Monaco.editor.IStandaloneEditorConstructionOptions = {
 
 interface CodeEditorProps {
     initialCode?: string;
-    onCodeChange?: Dispatch<React.SetStateAction<string>>
+    onCodeChange?: (code: string) => void;
     language: string
 };
 

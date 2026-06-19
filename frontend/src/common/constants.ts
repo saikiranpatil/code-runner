@@ -43,3 +43,4 @@ export const DEFAULT_CODE: Record<Language, string> = {
 }
 
 export const LANGUAGE_LOCAL_STORAGE_KEY = "LANGUAGE_LOCAL_STORAGE_KEY";
+export const SOURCE_CODE_LOCAL_STORAGE_KEY = "LANGUAGE_LOCAL_STORAGE_KEY";

@@ -8,7 +8,7 @@ import {
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
 import CodeEditor from "@/common/components/code-editor"
-import { DEFAULT_CODE, LANGUAGE_LOCAL_STORAGE_KEY, type Language } from "@/common/constants"
+import { DEFAULT_CODE, LANGUAGE_LOCAL_STORAGE_KEY, SOURCE_CODE_LOCAL_STORAGE_KEY, type Language } from "@/common/constants"
 import ProblemDescription from "@/components/problems/ProblemDetails/ProblemDescription"
 import SubmissionsTab from "@/components/problems/ProblemDetails/SubmisionsTab"
 import EditorToolbar from "@/components/problems/ProblemDetails/EditorToolbar"
@@ -24,13 +24,12 @@ import { Spinner } from "@/components/ui/spinner"
 import type { ExecStatus } from "../Problems"
 import type { RunResult, RunCodeRequest, SubmitResult } from "@/api/execution/execution"
 import queryClient from "@/utils/request/queryClient"
-import { getItem, setItem } from "@/utils/localstorage"
 
 export default function ProblemDetail(): JSX.Element {
     const { slug } = useParams<{ slug: string }>()
 
-    const [language, setLanguage] = useState<Language>(getItem(LANGUAGE_LOCAL_STORAGE_KEY) as Language || "javascript")
-    const [code, setCode] = useState<string>(DEFAULT_CODE[language])
+    const [language, setLanguage] = useState<Language>(localStorage.getItem(LANGUAGE_LOCAL_STORAGE_KEY) as Language || "javascript");
+    const [code, setCode] = useState<string>(localStorage.getItem(`${SOURCE_CODE_LOCAL_STORAGE_KEY}_${language}`) ?? DEFAULT_CODE[language]);
     const [status, setStatus] = useState<ExecStatus>("idle")
     const [runResult, setRunResult] = useState<RunResult | null>(null)
     const [judgeResult, setJudgeResult] = useState<SubmitResult | null>(null)
@@ -82,11 +81,16 @@ export default function ProblemDetail(): JSX.Element {
 
     const handleLanguageChange = (lang: Language): void => {
         setLanguage(lang)
-        setItem(LANGUAGE_LOCAL_STORAGE_KEY, lang);
+        localStorage.setItem(LANGUAGE_LOCAL_STORAGE_KEY, lang);
         setCode(DEFAULT_CODE[lang])
     }
 
-    const handleReset = (): void => setCode(DEFAULT_CODE[language])
+    const handleCodeChange = (code: string): void => {
+        setCode(code);
+        localStorage.setItem(`${SOURCE_CODE_LOCAL_STORAGE_KEY}_${language}`, code);
+    }
+
+    const handleReset = (): void => handleCodeChange(DEFAULT_CODE[language])
 
     const handleRun = (): void => {
         if (!problem?.id) return
@@ -147,7 +151,7 @@ export default function ProblemDetail(): JSX.Element {
                                     <CodeEditor
                                         language={language}
                                         initialCode={code}
-                                        onCodeChange={setCode}
+                                        onCodeChange={handleCodeChange}
                                     />
                                 </div>
                             </div>
