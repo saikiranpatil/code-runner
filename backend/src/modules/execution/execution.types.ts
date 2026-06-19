@@ -42,11 +42,19 @@ export interface ProblemExample {
 
 export interface TestCaseResult {
   testCaseId: string;
+  verdict: SubmissionVerdict;
+  executionTimeMs: number;
+  memoryUsedMb?: number;
+  stdout?: string;
+  stderr?: string;
+}
+
+export interface RunTestCaseResult {
+  testCaseId: string;
   input: string;
   expectedOutput: string;
   verdict: SubmissionVerdict;
   executionTimeMs: number;
-    memoryUsedMb?: number;
   stdout?: string;
   stderr?: string;
 }
@@ -55,7 +63,7 @@ export interface RunResult {
   verdict: SubmissionVerdict;
   passedCount: number;
   totalCount: number;
-  testCaseResults: TestCaseResult[];
+  testCaseResults: RunTestCaseResult[];
 }
 
 export interface JudgeResult {
@@ -64,7 +72,7 @@ export interface JudgeResult {
   passedCount: number;
   totalCount: number;
   executionTimeMs: number;
-  testCaseResults: TestCaseResult[]; // Only first failed (empty if all passed)
+  testCaseResults: TestCaseResult[];
 }
 
 export interface ExecutionOptions {
@@ -83,4 +91,12 @@ export interface ExecutionResult {
   memoryUsedMb?: number;
   timedOut: boolean;
   oomKilled: boolean;
+  /**
+   * True when the compile phase (not the run phase) produced a non-zero exit code.
+   * Allows determineVerdict() to return COMPILATION_ERROR rather than RUNTIME_ERROR.
+   *
+   * Previously, compilation failures were silently mis-classified as RUNTIME_ERROR
+   * because ExecutionResult carried no information about which phase had failed.
+   */
+  compilationFailed: boolean;
 }

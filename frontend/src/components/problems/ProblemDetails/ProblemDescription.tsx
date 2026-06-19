@@ -73,15 +73,16 @@ export default function ProblemDescription({ problem }: { problem: ProblemEntity
                         <div className="rounded-lg border border-border bg-muted/30 p-4 font-mono text-xs space-y-1.5">
                             <div>
                                 <span className="font-semibold text-foreground">Input:</span>
-                                <span className="ml-2 text-muted-foreground">{ex.input}</span>
+                                <p className=" mt-1 text-muted-foreground whitespace-pre-line">{ex.input}</p>
                             </div>
                             <div>
                                 <span className="font-semibold text-foreground">Output:</span>
-                                <span className="ml-2 text-muted-foreground">{ex.output}</span>
+                                <p className=" mt-1 text-muted-foreground whitespace-pre-line">{ex.output}</p>
                             </div>
                             {ex.explanation && (
                                 <div className="border-t border-border/50 pt-1.5 font-sans text-muted-foreground">
-                                    <span className="font-semibold font-mono">Explanation:</span>{" "}{ex.explanation}
+                                    <span className="font-semibold font-mono whitespace-pre-line">Explanation:</span>
+                                    <p className=" mt-1 text-muted-foreground whitespace-pre-line">{ex.explanation}</p>
                                 </div>
                             )}
                         </div>
