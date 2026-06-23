@@ -1,12 +1,11 @@
 import { Logger } from 'nestjs-pino';
-import { ExecutionModule } from './modules/execution/execution.module';
 import { NestFactory } from '@nestjs/core';
 import { envConfig } from './config';
+import { ExecutionWorkerModule } from './modules/execution/execution-worker.module';
 
 async function bootstrap() {
-    const app = await NestFactory.createApplicationContext(ExecutionModule, {
-        bufferLogs: true,
-        logger: false
+    const app = await NestFactory.createApplicationContext(ExecutionWorkerModule, {
+        bufferLogs: true
     });
 
     app.enableShutdownHooks();
@@ -15,14 +14,6 @@ async function bootstrap() {
     app.useLogger(logger);
 
     logger.log({ worker: envConfig.worker }, 'Worker started');
-
-    const shutdown = async () => {
-        await app.close(); // stops HTTP server + triggers module cleanup
-        process.exit(0);
-    };
-
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
 }
 
 void bootstrap();

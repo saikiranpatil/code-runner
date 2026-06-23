@@ -13,7 +13,8 @@ export const COOKIE_NAME = {
 export const IS_PUBLIC_KEY = 'isPublic';
 
 export const QUEUE_NAMES = {
-  EXECUTION: 'execution',
+  EXECUTION_RUN: 'execution-run',
+  EXECUTION_SUBMIT: 'execution-submit',
 } as const;
 
 export const NODE_ENVS = {

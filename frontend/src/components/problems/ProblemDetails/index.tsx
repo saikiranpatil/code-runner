@@ -1,12 +1,8 @@
-import { useState, type JSX } from "react"
+import { useEffect, useState, type JSX } from "react"
 import { BookOpen, History } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-    ResizableHandle,
-    ResizablePanel,
-    ResizablePanelGroup,
-} from "@/components/ui/resizable"
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import CodeEditor from "@/common/components/code-editor"
 import { DEFAULT_CODE, LANGUAGE_LOCAL_STORAGE_KEY, SOURCE_CODE_LOCAL_STORAGE_KEY, type Language } from "@/common/constants"
 import ProblemDescription from "@/components/problems/ProblemDetails/ProblemDescription"
@@ -15,92 +11,72 @@ import EditorToolbar from "@/components/problems/ProblemDetails/EditorToolbar"
 import OutputPanel from "@/components/problems/ProblemDetails/OutputPanel"
 import { useParams } from "react-router-dom"
 import NotFoundPage from "@/pages/NotFoundPage"
-import { useMutation, useQuery } from "@tanstack/react-query"
-import mutate from "@/utils/request/mutate"
-import executionApi from "@/api/execution/executionApi"
+import { useQuery } from "@tanstack/react-query"
 import query from "@/utils/request/query"
 import problemApi from "@/api/problem/problemApi"
 import { Spinner } from "@/components/ui/spinner"
 import type { ExecStatus } from "../Problems"
-import type { RunResult, RunCodeRequest, SubmitResult } from "@/api/execution/execution"
+import type { RunResult, RunCodeRequest, SubmitResult, SubmitCodeRequest } from "@/api/execution/execution"
+import executionApi from "@/api/execution/executionApi"
+import useExecutionJob from "@/hooks/useExecution"
 import queryClient from "@/utils/request/queryClient"
+
+type ActiveKind = "run" | "submit" | null
 
 export default function ProblemDetail(): JSX.Element {
     const { slug } = useParams<{ slug: string }>()
+    const [language, setLanguage] = useState<Language>(localStorage.getItem(LANGUAGE_LOCAL_STORAGE_KEY) as Language || "javascript")
+    const [code, setCode] = useState<string>(localStorage.getItem(`${SOURCE_CODE_LOCAL_STORAGE_KEY}_${language}_${slug}`) ?? DEFAULT_CODE[language])
+    const [activeKind, setActiveKind] = useState<ActiveKind>(null)
 
-    const [language, setLanguage] = useState<Language>(localStorage.getItem(LANGUAGE_LOCAL_STORAGE_KEY) as Language || "javascript");
-    const [code, setCode] = useState<string>(localStorage.getItem(`${SOURCE_CODE_LOCAL_STORAGE_KEY}_${language}`) ?? DEFAULT_CODE[language]);
-    const [status, setStatus] = useState<ExecStatus>("idle")
-    const [runResult, setRunResult] = useState<RunResult | null>(null)
-    const [judgeResult, setJudgeResult] = useState<SubmitResult | null>(null)
-
-    const {
-        data: problem,
-        isLoading,
-        isError,
-    } = useQuery({
+    const { data: problem, isLoading, isError } = useQuery({
         queryKey: ["GetProblemDetails", slug],
         queryFn: query(problemApi.findBySlug, { pathParams: { slug: slug! } }),
         enabled: !!slug,
-    });
+    })
 
-    const runRequestPayload: RunCodeRequest = { language: language, problemId: problem?.id!, sourceCode: code };
+    const runJob = useExecutionJob<RunCodeRequest, RunResult>({
+        enqueueRoute: executionApi.run,
+        statusRoute: executionApi.getRunStatus,
+    })
+    const submitJob = useExecutionJob<SubmitCodeRequest, SubmitResult>({
+        enqueueRoute: executionApi.submit,
+        statusRoute: executionApi.getSubmitStatus,
+    })
 
-    const { mutate: runCode, isPending: isRunning } = useMutation({
-        mutationFn: mutate(executionApi.run, { body: runRequestPayload }),
-        onMutate: () => {
-            setStatus("running")
-            setRunResult(null)
-            setJudgeResult(null)
-        },
-        onSuccess: (data: RunResult) => {
-            setRunResult(data)
-            setStatus("done")
-        },
-        onError: () => setStatus("error"),
-    });
-
-    const submitRequestPayload: RunCodeRequest = { language: language, problemId: problem?.id!, sourceCode: code };
-
-    const { mutate: submitCode, isPending: isSubmitting } = useMutation({
-        mutationFn: mutate(executionApi.submit, { body: submitRequestPayload }),
-        onMutate: () => {
-            setStatus("submitting")
-            setRunResult(null)
-            setJudgeResult(null)
-        },
-        onSuccess: (data: SubmitResult) => {
-            setJudgeResult(data)
-            setStatus("done")
-            queryClient.invalidateQueries({
-                queryKey: [problemApi.getSubmissions.path],
-            })
-        },
-        onError: () => setStatus("error"),
-    });
+    useEffect(() => {
+        if (activeKind === "submit" && submitJob.status === "done") {
+            queryClient.invalidateQueries({ queryKey: [problemApi.getSubmissions.path] })
+        }
+    }, [activeKind, submitJob.status])
 
     const handleLanguageChange = (lang: Language): void => {
         setLanguage(lang)
-        localStorage.setItem(LANGUAGE_LOCAL_STORAGE_KEY, lang);
+        localStorage.setItem(LANGUAGE_LOCAL_STORAGE_KEY, lang)
         setCode(DEFAULT_CODE[lang])
     }
-
     const handleCodeChange = (code: string): void => {
-        setCode(code);
-        localStorage.setItem(`${SOURCE_CODE_LOCAL_STORAGE_KEY}_${language}`, code);
+        setCode(code)
+        localStorage.setItem(`${SOURCE_CODE_LOCAL_STORAGE_KEY}_${language}_${slug}`, code)
     }
-
     const handleReset = (): void => handleCodeChange(DEFAULT_CODE[language])
-
     const handleRun = (): void => {
         if (!problem?.id) return
-        runCode({ problemId: problem.id, language, sourceCode: code })
+        setActiveKind("run")
+        runJob.execute({ problemId: problem.id, language, sourceCode: code })
     }
-
     const handleSubmit = (): void => {
         if (!problem?.id) return
-        submitCode({ problemId: problem.id, language, sourceCode: code })
+        setActiveKind("submit")
+        submitJob.execute({ problemId: problem.id, language, sourceCode: code })
     }
+
+    const status: ExecStatus =
+        activeKind === "run" && (runJob.status === "submitting" || runJob.status === "polling") ? "running"
+            : activeKind === "submit" && (submitJob.status === "submitting" || submitJob.status === "polling") ? "submitting"
+                : activeKind === "run" && (runJob.status === "failed" || runJob.status === "timeout") ? "error"
+                    : activeKind === "submit" && (submitJob.status === "failed" || submitJob.status === "timeout") ? "error"
+                        : activeKind ? "done" : "idle"
 
     if (isLoading) return <Spinner fullScreen />
     if (isError || !problem) return <NotFoundPage />
@@ -111,14 +87,8 @@ export default function ProblemDetail(): JSX.Element {
                 <ResizablePanel defaultSize={40} minSize={28}>
                     <Tabs defaultValue="description" className="flex h-full flex-col">
                         <TabsList variant="line" className="shrink-0 px-4">
-                            <TabsTrigger value="description">
-                                <BookOpen className="mr-1.5 h-4 w-4" />
-                                Description
-                            </TabsTrigger>
-                            <TabsTrigger value="submissions">
-                                <History className="mr-1.5 h-4 w-4" />
-                                Submissions
-                            </TabsTrigger>
+                            <TabsTrigger value="description"><BookOpen className="mr-1.5 h-4 w-4" />Description</TabsTrigger>
+                            <TabsTrigger value="submissions"><History className="mr-1.5 h-4 w-4" />Submissions</TabsTrigger>
                         </TabsList>
                         <ScrollArea className="flex-1">
                             <TabsContent value="description" className="m-0">
@@ -130,9 +100,7 @@ export default function ProblemDetail(): JSX.Element {
                         </ScrollArea>
                     </Tabs>
                 </ResizablePanel>
-
                 <ResizableHandle />
-
                 <ResizablePanel defaultSize={60} minSize={40}>
                     <ResizablePanelGroup orientation="vertical">
                         <ResizablePanel defaultSize={65} minSize={40}>
@@ -143,27 +111,21 @@ export default function ProblemDetail(): JSX.Element {
                                     onReset={handleReset}
                                     onRun={handleRun}
                                     onSubmit={handleSubmit}
-                                    isRunning={isRunning}
-                                    isSubmitting={isSubmitting}
+                                    isRunning={status === "running"}
+                                    isSubmitting={status === "submitting"}
                                     code={code}
                                 />
                                 <div className="flex-1 overflow-hidden">
-                                    <CodeEditor
-                                        language={language}
-                                        initialCode={code}
-                                        onCodeChange={handleCodeChange}
-                                    />
+                                    <CodeEditor language={language} initialCode={code} onCodeChange={handleCodeChange} />
                                 </div>
                             </div>
                         </ResizablePanel>
-
                         <ResizableHandle />
-
                         <ResizablePanel defaultSize={35} minSize={15}>
                             <OutputPanel
                                 status={status}
-                                runResult={runResult}
-                                judgeResult={judgeResult}
+                                runResult={activeKind === "run" ? runJob.result : null}
+                                judgeResult={activeKind === "submit" ? submitJob.result : null}
                             />
                         </ResizablePanel>
                     </ResizablePanelGroup>

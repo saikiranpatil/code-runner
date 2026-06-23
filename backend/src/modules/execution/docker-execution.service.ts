@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
@@ -7,6 +7,7 @@ import * as os from 'os';
 import { ExecutionOptions, ExecutionResult } from './execution.types';
 import { LanguageRegistry } from './strategies/language-registry';
 import { LanguageStrategy } from './strategies/language-strategy.interface';
+import { ShutdownService } from '../../shutdown/shutdown.service';
 
 const execFileAsync = promisify(execFile);
 
@@ -77,11 +78,42 @@ interface ContainerRunParams {
 }
 
 @Injectable()
-export class DockerExecutionService {
+export class DockerExecutionService implements OnModuleInit {
   private readonly logger = new Logger(DockerExecutionService.name);
   private readonly isWindows = os.platform() === 'win32';
 
-  constructor(private readonly languageRegistry: LanguageRegistry) { }
+  /**
+   * Tracks all container names that are currently running. Populated just before
+   * `docker run` is called and cleared when the process exits. Used by the shutdown
+   * handler to force-kill any containers left alive during a SIGTERM/SIGINT.
+   */
+  private readonly activeContainers = new Set<string>();
+
+  constructor(
+    private readonly languageRegistry: LanguageRegistry,
+    private readonly shutdownService: ShutdownService,
+  ) { }
+
+  onModuleInit(): void {
+    this.shutdownService.register(async () => {
+      await this.killAllActiveContainers();
+    });
+  }
+
+  /**
+   * Kills every container that is still tracked in `activeContainers`.
+   * Called by ShutdownService during graceful shutdown so no orphaned containers
+   * are left running after the process exits.
+   */
+  private async killAllActiveContainers(): Promise<void> {
+    if (this.activeContainers.size === 0) return;
+
+    this.logger.log(`Killing ${this.activeContainers.size} active container(s) before shutdown`);
+
+    await Promise.allSettled(
+      [...this.activeContainers].map((name) => this.killContainer(name)),
+    );
+  }
 
   async execute(options: ExecutionOptions): Promise<ExecutionResult> {
     const { language, sourceCode, stdin, timeLimitMs, memoryLimitMb } = options;
@@ -199,8 +231,6 @@ export class DockerExecutionService {
     });
   }
 
-  // ── Private: Docker orchestration ─────────────────────────────────────────
-
   private async runContainer(params: ContainerRunParams): Promise<ExecutionResult> {
     const { containerName, timeLimitMs, isRunPhase = false } = params;
     const args = this.buildDockerRunArgs(params);
@@ -210,64 +240,75 @@ export class DockerExecutionService {
     let timedOut = false;
     let killTimer: NodeJS.Timeout | null = null;
 
-    const { stdout, stderr, exitCode } = await new Promise<{ stdout: string; stderr: string; exitCode: number }>(
-      (resolve) => {
-        execFile(
-          'docker',
-          args,
-          { env, maxBuffer: MAX_OUTPUT_BYTES * 2 },
-          (error, rawStdout, rawStderr) => {
-            if (killTimer) clearTimeout(killTimer);
-            resolve({
-              stdout: rawStdout ?? '',
-              stderr: rawStderr ?? '',
-              exitCode: this.extractExitCode(error),
-            });
-          },
-        );
+    // Track this container so the shutdown handler can kill it if the process
+    // receives SIGTERM/SIGINT while a run is in progress.
+    this.activeContainers.add(containerName);
 
-        // Give Docker a little extra time beyond the requested limit to absorb its
-        // own startup/teardown overhead before we force-kill the container.
-        killTimer = setTimeout(async () => {
+    try {
+      const { stdout, stderr, exitCode } = await new Promise<{ stdout: string; stderr: string; exitCode: number }>(
+        (resolve) => {
+          execFile(
+            'docker',
+            args,
+            { env, maxBuffer: MAX_OUTPUT_BYTES * 2 },
+            (error, rawStdout, rawStderr) => {
+              if (killTimer) clearTimeout(killTimer);
+              resolve({
+                stdout: rawStdout ?? '',
+                stderr: rawStderr ?? '',
+                exitCode: this.extractExitCode(error),
+              });
+            },
+          );
+
+          // Give Docker a little extra time beyond the requested limit to absorb its
+          // own startup/teardown overhead before we force-kill the container.
+          killTimer = setTimeout(async () => {
+            timedOut = true;
+            await this.killContainer(containerName);
+          }, timeLimitMs + KILL_GRACE_MS);
+        },
+      );
+
+      // Docker SIGKILLs an OOM'd container, which surfaces as exit code 137. Only
+      // attribute that to OOM if our own timeout didn't fire first.
+      const oomKilled = exitCode === 137 && !timedOut;
+
+      let executionTimeMs = Date.now() - startTime;
+      let finalStderr = stderr;
+
+      // The run phase wraps its command with `wrapWithTiming`, which reports the
+      // container's own high-resolution execution time on stderr. Prefer that over
+      // host-side wall-clock timing, which also bakes in Docker's startup/teardown
+      // overhead and would overstate how long the user's code actually ran.
+      if (isRunPhase) {
+        const match = stderr.match(TIMING_MARKER_REGEX);
+        if (match) {
+          const nanoseconds = BigInt(match[1]);
+          executionTimeMs = Number(nanoseconds / 1_000_000n);
+          finalStderr = stderr.replace(TIMING_MARKER_REGEX, '');
+        }
+
+        if (executionTimeMs > timeLimitMs) {
           timedOut = true;
-          await this.killContainer(containerName);
-        }, timeLimitMs + KILL_GRACE_MS);
-      },
-    );
-
-    // Docker SIGKILLs an OOM'd container, which surfaces as exit code 137. Only
-    // attribute that to OOM if our own timeout didn't fire first.
-    const oomKilled = exitCode === 137 && !timedOut;
-
-    let executionTimeMs = Date.now() - startTime;
-    let finalStderr = stderr;
-
-    // The run phase wraps its command with `wrapWithTiming`, which reports the
-    // container's own high-resolution execution time on stderr. Prefer that over
-    // host-side wall-clock timing, which also bakes in Docker's startup/teardown
-    // overhead and would overstate how long the user's code actually ran.
-    if (isRunPhase) {
-      const match = stderr.match(TIMING_MARKER_REGEX);
-      if (match) {
-        const nanoseconds = BigInt(match[1]);
-        executionTimeMs = Number(nanoseconds / 1_000_000n);
-        finalStderr = stderr.replace(TIMING_MARKER_REGEX, '');
+        }
       }
 
-      if (executionTimeMs > timeLimitMs) {
-        timedOut = true;
-      }
+      return {
+        stdout: stdout.slice(0, MAX_OUTPUT_BYTES).trim(),
+        stderr: finalStderr.slice(0, MAX_OUTPUT_BYTES).trim(),
+        exitCode,
+        executionTimeMs,
+        timedOut,
+        oomKilled,
+        compilationFailed: false,
+      };
+    } finally {
+      // Always remove the container from tracking — whether it succeeded, timed out,
+      // or threw. This prevents stale names from accumulating and being re-killed
+      // on shutdown after the container has already exited.
+      this.activeContainers.delete(containerName);
     }
-
-    return {
-      stdout: stdout.slice(0, MAX_OUTPUT_BYTES).trim(),
-      stderr: finalStderr.slice(0, MAX_OUTPUT_BYTES).trim(),
-      exitCode,
-      executionTimeMs,
-      timedOut,
-      oomKilled,
-      compilationFailed: false,
-    };
   }
 
   /**

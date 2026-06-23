@@ -6,18 +6,13 @@ import { ExecutionDto } from './modules/execution/dto/execution.dto';
 export class AppController {
   constructor(private readonly appService: AppService) { }
 
-  @Get()
+  @Get("health")
   getHello(): string {
-    return this.appService.getHello();
+    return this.appService.health();
   }
 
   @Get('profile')
   getProfile(@Req() req: { user: string }) {
     return req.user;
-  }
-
-  @Get('execution/:jobId')
-  getResult(@Param('jobId') jobId: string) {
-    return this.appService.getResult(jobId);
   }
 }

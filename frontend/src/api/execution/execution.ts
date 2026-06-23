@@ -47,3 +47,15 @@ export interface SubmitResult {
   executionTimeMs: number
   testCaseResults: TestCaseResult[]
 }
+
+export interface EnqueueJobResponse {
+  jobId: string
+}
+
+export type JobState = "waiting" | "active" | "completed" | "failed" | "delayed" | "unknown"
+
+export interface JobStatusResponse<TResult> {
+  state: JobState
+  result: TResult | null
+  error: string | null
+}

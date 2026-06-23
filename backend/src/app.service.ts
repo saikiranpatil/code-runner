@@ -7,36 +7,7 @@ import { ExecutionDto } from './modules/execution/dto/execution.dto';
 
 @Injectable()
 export class AppService {
-  constructor(
-    @InjectQueue(QUEUE_NAMES.EXECUTION)
-    private readonly queue: Queue,
-    private readonly logger: Logger,
-  ) { }
-
-  getHello(): string {
-    return 'Hello World!';
-  }
-
-  async handleExecute(createExecutionDto: ExecutionDto) {
-    const job = await this.queue.add('run-code', createExecutionDto, {
-      attempts: 3,
-      removeOnComplete: false,
-      removeOnFail: false,
-    });
-
-    return { jobId: job.id };
-  }
-
-  async getResult(jobId: string) {
-    const job = await this.queue.getJob(jobId);
-    this.logger.log(job, "Return value of getResult")
-    if (!job) throw new NotFoundException('Job not found or expired');
-
-    const state = await job.getState();
-    return {
-      state,
-      result: state === 'completed' ? job.returnvalue : null,
-      error: state === 'failed' ? job.failedReason : null,
-    };
+  health(): string {
+    return 'OK';
   }
 }

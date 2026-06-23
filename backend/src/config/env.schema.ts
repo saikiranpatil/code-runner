@@ -32,6 +32,8 @@ export const envSchema = z.object({
     WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
     WORKER_EXECUTION_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
     WORKER_MAX_OUTPUT_BYTES: z.coerce.number().int().positive().default(65_536),
+    WORKER_RUN_CONCURRENCY: z.coerce.number().int().positive().default(5),
+    WORKER_SUBMIT_CONCURRENCY: z.coerce.number().int().positive().default(3),
 
     // Database
     DATABASE_URL: z.string().min(1),

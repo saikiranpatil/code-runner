@@ -20,6 +20,8 @@ export const envConfig = Object.freeze({
     concurrency: parsed.WORKER_CONCURRENCY,
     executionTimeout: parsed.WORKER_EXECUTION_TIMEOUT_MS,
     maxOutputBytes: parsed.WORKER_MAX_OUTPUT_BYTES,
+    runConcurrency: parsed.WORKER_RUN_CONCURRENCY,
+    submitConcurrency: parsed.WORKER_SUBMIT_CONCURRENCY,
   },
 
   database: {
