@@ -2,18 +2,6 @@ import { z } from 'zod';
 import ms, { StringValue } from 'ms';
 import { NODE_ENVS } from '../common/constants';
 
-const timeSpanToMs = (val: string | number): number => {
-    if (typeof val === 'number') return val;
-    const result = ms(val as StringValue);
-    if (result === undefined) throw new Error(`Invalid time span: "${val}"`);
-    return result;
-};
-
-const timeSpan = z
-    .union([z.string(), z.number()])
-    .transform(timeSpanToMs)
-    .refine((v) => v > 0, { message: 'Must be a positive duration (e.g. "15m", "7d")' });
-
 export const envSchema = z.object({
     PORT: z.coerce.number().int().positive().default(3000),
 
@@ -40,13 +28,19 @@ export const envSchema = z.object({
 
     // JWT access token
     JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-    JWT_EXPIRATION: timeSpan,
+    JWT_EXPIRATION: z.custom<StringValue>(
+        (val): val is StringValue => typeof val === 'string' && ms(val as StringValue) !== undefined,
+        { message: 'Invalid duration string (e.g. "2m", "15m")' }
+    ).default("15m"),
 
     // JWT refresh token
     JWT_REFRESH_SECRET: z
         .string()
         .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
-    JWT_REFRESH_EXPIRATION: timeSpan,
+    JWT_REFRESH_EXPIRATION: z.custom<StringValue>(
+        (val): val is StringValue => typeof val === 'string' && ms(val as StringValue) !== undefined,
+        { message: 'Invalid duration string (e.g. "2m", "15m")' }
+    ).default("7d"),
 
     // CORS
     CORS_ALLOWED_ORIGINS: z.string().min(1).default('http://localhost:5173'),

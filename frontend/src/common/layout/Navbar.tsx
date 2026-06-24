@@ -56,8 +56,8 @@ const Navbar = () => {
             toast.success(data.message);
             handleLogout();
         },
-        onError: (error: any) => {
-            toast.error(error.message);
+        onError: () => {
+            handleLogout();
         }
     });
 

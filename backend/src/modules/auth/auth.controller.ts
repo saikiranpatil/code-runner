@@ -33,7 +33,7 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async localLogin(@Req() req: any, @Res({ passthrough: true }) res) {
         const result = await this.authService.login(req.user as User);
-        this.setRefreshCookie(res, result.refreshToken);
+        this.setRefreshCookie(res, result.refreshToken, result.expiresIn);
         // Strip the raw token — only the httpOnly cookie carries it
         const { refreshToken, ...payload } = result;
         return payload;
@@ -48,7 +48,7 @@ export class AuthController {
         @Res({ passthrough: true }) res,
     ) {
         const result = await this.authService.register(registerDto);
-        this.setRefreshCookie(res, result.refreshToken);
+        this.setRefreshCookie(res, result.refreshToken, result.expiresIn);
         const { refreshToken, ...payload } = result;
         return payload;
     }
@@ -71,11 +71,11 @@ export class AuthController {
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
     async refresh(
-        @Request() req: any,
+        @Request() req: { user: User },
         @Res({ passthrough: true }) res,
     ) {
-        const result = await this.authService.refresh(req.user as User);
-        this.setRefreshCookie(res, result.refreshToken);
+        const result = await this.authService.refresh(req.user.id);
+        this.setRefreshCookie(res, result.refreshToken, result.expiresIn);
         const { refreshToken, ...payload } = result;
         return payload;
     }
@@ -112,7 +112,7 @@ export class AuthController {
 
     private async oAuthLogin(res: Response, user: User) {
         const result = await this.authService.login(user);
-        this.setRefreshCookie(res, result.refreshToken);
+        this.setRefreshCookie(res, result.refreshToken, result.expiresIn);
 
         // Send token to the popup window and close it
         const { refreshToken, ...payload } = result;
@@ -122,12 +122,12 @@ export class AuthController {
         );
     }
 
-    private setRefreshCookie(res: Response, refreshToken: string) {
+    private setRefreshCookie(res: Response, refreshToken: string, expiresIn: number) {
         res.cookie(COOKIE_NAME.REFRESH_TOKEN, refreshToken, {
             httpOnly: true,
             secure: envConfig.app.nodeEnv === NODE_ENVS.PRODUCTION,
             sameSite: 'lax',
-            maxAge: envConfig.jwtRefresh.expiry,
+            maxAge: expiresIn,
             path: '/auth/refresh',
         });
     }

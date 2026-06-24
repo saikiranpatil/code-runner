@@ -28,9 +28,12 @@ const doRefresh = async () => {
   try {
     // Lazy import to avoid circular dependency with axios
     const { default: api } = await import('@/api/axios');
+
     const res = await api.post(authApi.refresh.path);
     const { user, accessToken, expiresIn } = res.data;
-    console.log("EXPIRES IN: ", expiresIn, accessToken);
+
+    console.log(`NEW ACCESS TOKEN EXPIRES IN: ${expiresIn}ms`);
+    
     useAuthStore.getState().handleLogin(user, accessToken, expiresIn);
   } catch {
     useAuthStore.getState().handleLogout();
@@ -70,6 +73,9 @@ export const useAuthStore = create<AuthState>()(
         });
 
         const delay = Math.max(expiresIn - REFRESH_BUFFER_MS, 0);
+        
+        console.log(`Setting setTimeout for 'doRefresh' after ${delay}ms`)
+        
         const timer = setTimeout(doRefresh, delay);
         set({ _refreshTimer: timer });
       },
