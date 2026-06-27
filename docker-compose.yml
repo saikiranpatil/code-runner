@@ -1,62 +1,54 @@
 services:
-  # nginx:
-  #   image: nginx:alpine
-  #   ports:
-  #     - "80:80"
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  #   depends_on:
-  #     - server
-  #     - frontend
-  #   networks:
-  #     - app-network
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - server
+      - frontend
+    networks:
+      - app-network
 
-  # server:
-  #   build: ./backend
-  #   command: node dist/src/main.js
-  #   environment:
-  #     - NODE_ENV=PRODUCTION
-  #     - REDIS_HOST=redis
-  #     - REDIS_PORT=6379
-  #     - POSTGRES_HOST=postgres
-  #     - POSTGRES_PORT=5432
-  #     - POSTGRES_DB=code-runner
-  #     - POSTGRES_USER=postgres
-  #     - POSTGRES_PASSWORD=postgres
-  #   deploy:
-  #     replicas: 3
-  #   depends_on:
-  #     - redis
-  #     - postgres
-  #   restart: unless-stopped
-  #   networks:
-  #     - app-network
+  server:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: api-server
+    env_file:
+      - ./backend/.env
+    # deploy:
+    #   replicas: 3
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    networks:
+      - app-network
 
-  # worker:
-  #   build: ./backend
-  #   command: node dist/src/worker.js
-  #   environment:
-  #     - NODE_ENV=PRODUCTION
-  #     - REDIS_HOST=redis
-  #     - REDIS_PORT=6379
-  #     - POSTGRES_HOST=postgres
-  #     - POSTGRES_PORT=5432
-  #     - POSTGRES_DB=code-runner
-  #     - POSTGRES_USER=postgres
-  #     - POSTGRES_PASSWORD=postgres
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   depends_on:
-  #     - redis
-  #     - postgres
-  #   restart: unless-stopped
-  #   networks:
-  #     - app-network
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: worker-server
+    env_file:
+      - ./backend/.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    networks:
+      - app-network
 
-  # frontend:
-  #   build: ./frontend
-  #   networks:
-  #     - app-network
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    networks:
+      - app-network
 
   redis:
     image: redis:7-alpine

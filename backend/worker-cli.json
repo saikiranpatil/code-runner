@@ -4,6 +4,6 @@
   "sourceRoot": "src",
   "entryFile": "worker",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": false
   }
 }

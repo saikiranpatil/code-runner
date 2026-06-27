@@ -11,6 +11,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
+  app.setGlobalPrefix("api");
+
   // Logging
   const logger = app.get(Logger);
   app.useLogger(logger);
