@@ -1,11 +1,12 @@
-import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ExecutionDto } from './modules/execution/dto/execution.dto';
+import { Public } from './modules/auth/auth.decorators';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) { }
 
+  @Public()
   @Get("health")
   getHello(): string {
     return this.appService.health();
