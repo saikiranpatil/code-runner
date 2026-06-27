@@ -1,5 +1,5 @@
-    import { envConfig } from './env.config';
+import { envConfig } from './env.config';
 
-    export const redisConfig = {
+export const redisConfig = {
     connection: envConfig.redis,
-    };
+};

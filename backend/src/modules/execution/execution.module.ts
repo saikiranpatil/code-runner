@@ -5,9 +5,11 @@ import { PrismaModule } from "../../prisma/prisma.module";
 import { ProblemsModule } from "../problems/problems.module";
 import { ExecutionController } from "./execution.controller";
 import { ExecutionQueueService } from "./execution-queue.service";
+import { redisConfig } from "../../config";
 
 @Module({
   imports: [
+    BullModule.forRoot(redisConfig),
     BullModule.registerQueue(
       { name: QUEUE_NAMES.EXECUTION_RUN },
       { name: QUEUE_NAMES.EXECUTION_SUBMIT },

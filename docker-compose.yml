@@ -10,16 +10,25 @@ services:
       - frontend
     networks:
       - app-network
-
+  
   server:
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: api-server
+    deploy:
+      replicas: 3
     env_file:
       - ./backend/.env
-    # deploy:
-    #   replicas: 3
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/code-runner
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FRONTEND_URL: http://localhost
+      CORS_ALLOWED_ORIGINS: http://localhost
+      GITHUB_CALLBACK_URL: http://localhost/api/auth/github/callback
+      GOOGLE_CALLBACK_URL: http://localhost/api/auth/google/callback
     depends_on:
       - redis
       - postgres
@@ -35,9 +44,9 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - NODE_ENV=production
-      - REDIS_HOST=redis
-      - POSTGRES_HOST=postgres
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/code-runner
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -53,14 +62,14 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./frontend/.env
+    environment:
+      VITE_API_BASE_URL: http://localhost:80
     networks:
       - app-network
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -84,8 +93,6 @@ services:
       POSTGRES_DB: code-runner
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
